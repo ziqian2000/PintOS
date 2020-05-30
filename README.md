@@ -78,7 +78,7 @@ the following files can be found in folder 'build/'
 
 to run pintos in simulation (here using Bochs and no VGA), run
 
-    pintos -v --bochs
+    pintos -v bochs
 
 to run all the tests and see your grade, run
 
