@@ -1,10 +1,8 @@
-It is a team project for OS course. 
+It is a team project (team members:  @[MintGreenTZ](https://github.com/MintGreenTZ), @[ulitaig](https://github.com/ulitaig), @[sparkmxy](https://github.com/sparkmxy), @[ziqian2000](https://github.com/ziqian2000) ).
 
-Team member:  @[MintGreenTZ](https://github.com/MintGreenTZ), @[ulitaig](https://github.com/ulitaig), @[sparkmxy](https://github.com/sparkmxy), @[ziqian2000](https://github.com/ziqian2000)
+**ATTENTION:** Please do this project on your virtual machine. Some strange errors may occur when using WSL.
 
-Special thanks to @[Question406](https://github.com/Question406)!  If you have trouble with your environment, click [here](https://github.com/Question406/PintOS/blob/master/build_environment.md); if you have trouble debugging with GDB, click [here](https://github.com/Question406/PintOS/blob/master/debug_with_gdb.md).
-
-Below is the documentation of this project cloned from [here](https://github.com/LiJiasen-00921/PintOS-Assignment).
+**GUIDE:** If you have trouble with your environment, click [here](https://github.com/Question406/PintOS/blob/master/build_environment.md); if you have trouble debugging with GDB, click [here](https://github.com/Question406/PintOS/blob/master/debug_with_gdb.md). But first, read the documentation below (cloned from [here](https://github.com/LiJiasen-00921/PintOS-Assignment)).
 
 ---
 
@@ -78,7 +76,7 @@ the following files can be found in folder 'build/'
 
 to run pintos in simulation (here using Bochs and no VGA), run
 
-    pintos -v bochs
+    pintos -v --bochs
 
 to run all the tests and see your grade, run
 
