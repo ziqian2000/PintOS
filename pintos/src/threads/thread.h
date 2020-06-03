@@ -94,7 +94,7 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     /* The number of remaining ticks before awakened. */
-    int remaining_sleeping_ticks;
+    int64_t remaining_sleeping_ticks;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
