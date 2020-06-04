@@ -208,7 +208,7 @@ lock_acquire (struct lock *lock)
   /* START: Priority donation before requiring. */
   old_level = intr_disable();
 
-  if(lock->holder != NULL)
+  if(lock->holder != NULL && !thread_mlfqs)
   {
     current_thread->locks_acquiring = lock;
     l = lock;
@@ -229,10 +229,13 @@ lock_acquire (struct lock *lock)
   /* START: Cancel priority donation after obtaining the desired lock. */
   old_level = intr_disable();
 
-  current_thread->locks_acquiring = NULL;
-  lock_update_priority(lock);
-  list_push_back(&current_thread->locks_holding, &lock->elem);
-  thread_update_priority(current_thread);
+  if(!thread_mlfqs)
+  {
+    current_thread->locks_acquiring = NULL;
+    lock_update_priority(lock);
+    list_push_back(&current_thread->locks_holding, &lock->elem);
+    thread_update_priority(current_thread);
+  }
 
   intr_set_level(old_level);
   /* END: Cancel priority donation after obtaining the desired lock. */
@@ -274,17 +277,20 @@ lock_release (struct lock *lock)
 
   lock->holder = NULL;
 
-  int old_priority = thread_current()->priority;
-
-  list_remove(&lock->elem); // remove from locks_holding
-  thread_update_priority(thread_current());
-
-  struct lock *l = thread_current()->locks_acquiring;
-  while(l != NULL && l->holder->priority == old_priority)
+  if(!thread_mlfqs)
   {
-    lock_update_priority(l);
-    thread_donate_priority(l->holder);
-    l = l->holder->locks_acquiring;
+    int old_priority = thread_current()->priority;
+  
+    list_remove(&lock->elem); // remove from locks_holding
+    thread_update_priority(thread_current());
+
+    struct lock *l = thread_current()->locks_acquiring;
+    while(l != NULL && l->holder->priority == old_priority)
+    {
+      lock_update_priority(l);
+      thread_donate_priority(l->holder);
+      l = l->holder->locks_acquiring;
+    }
   }
 
   sema_up (&lock->semaphore);

@@ -174,6 +174,19 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_foreach (sleeping_thread_check, NULL);
+  if(thread_mlfqs)
+  {
+    /* Every 1 tick. Only current thread's recent_CPU is modified. */
+    thread_mlfqs_increase_recent_CPU();
+
+    /* Every 4 ticks. Only current thread need to be recalculated since only its recent_CPU is changed. */
+    if(ticks % 4 == 0)
+      thread_mlfqs_update_priority(thread_current());
+
+    /* Every 1 second. */
+    if(ticks % TIMER_FREQ == 0)
+      thread_mlfqs_update_load_avg_and_recent_cpu();
+  }
   thread_tick ();
 }
 
