@@ -93,8 +93,10 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    /* The number of remaining ticks before awakened. */
-    int64_t remaining_sleeping_ticks;
+    int64_t remaining_sleeping_ticks;   /* The number of remaining ticks before awakened. */
+    int base_priority;                  /* Base priority. */
+    struct list locks_holding;          /* Holded locks. */
+    struct lock *locks_acquiring;       /* Lock being acquired and waited for. */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -144,5 +146,9 @@ int thread_get_load_avg (void);
 void sleeping_thread_check(struct thread *, void *);
 
 bool thread_cmp_by_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
+void thread_adjust_for_priority(struct thread *);
+void thread_update_priority(struct thread *);
+void thread_donate_priority(struct thread *);
 
 #endif /* threads/thread.h */

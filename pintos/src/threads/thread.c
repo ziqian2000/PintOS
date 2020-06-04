@@ -337,8 +337,13 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  enum intr_level old_level = intr_disable();
+  
+  thread_current()->base_priority = new_priority;
+  thread_update_priority(thread_current());
   thread_yield();
+
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -464,9 +469,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
+  t->base_priority = t->priority = priority;
   t->magic = THREAD_MAGIC;
   t->remaining_sleeping_ticks = 0;
+  t->locks_acquiring = NULL;
+  list_init(&t->locks_holding);
 
   old_level = intr_disable ();
   list_insert_ordered(&all_list, &t->allelem, (list_less_func *) &thread_cmp_by_priority, NULL);
@@ -604,4 +611,44 @@ bool
 thread_cmp_by_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+}
+
+/* Update priority of thread considering priority donation. */
+void
+thread_update_priority(struct thread *t)
+{
+  enum intr_level old_level = intr_disable();
+
+  t->priority = t->base_priority;
+  if(!list_empty(&t->locks_holding))
+  {
+    list_sort(&t->locks_holding, lock_cmp_by_priority, NULL); // necessary since priority can be modified directly when donating
+    int max_priority_among_locks = list_entry(list_front(&t->locks_holding), struct lock, elem)->max_priority;
+    if(max_priority_among_locks > t->priority)
+      t->priority = max_priority_among_locks;
+  }
+
+  intr_set_level (old_level);
+}
+
+/* Some adjustments after priority being set. */
+void 
+thread_adjust_for_priority(struct thread *t)
+{
+  ASSERT (intr_get_level () == INTR_OFF);
+  if(t->status == THREAD_READY)
+  {
+    list_remove(&t->elem);
+    list_insert_ordered(&ready_list, &t->elem, thread_cmp_by_priority, NULL);
+  }
+}
+
+/* Priority donation. First modify the priority. Then adjust its location in ready_list. */
+void 
+thread_donate_priority(struct thread *t)
+{
+  enum intr_level old_level = intr_disable();
+  thread_update_priority(t);
+  thread_adjust_for_priority(t);
+  intr_set_level (old_level);
 }
