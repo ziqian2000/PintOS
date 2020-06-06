@@ -1,6 +1,8 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
+#define USERPROG // stupid VSCode
+
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
