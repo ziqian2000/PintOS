@@ -1,7 +1,7 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
-#define USERPROG // stupid VSCode
+// #define USERPROG // stupid VSCode
 
 #include <debug.h>
 #include <list.h>
@@ -104,10 +104,13 @@ struct thread
     int nice;                           /* Niceness. */
     fixed_t recent_CPU;                 /* An estimate of the CPU time the thread has used recently. */
 
-#ifdef USERPROG
+// #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-#endif
+
+    int max_fd;                         /* Maximum value of file descriptor. */
+    struct list file_nodes;             /* List of file nodes. */
+// #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

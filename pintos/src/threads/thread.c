@@ -482,6 +482,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->locks_acquiring = NULL;
   t->nice = (t == initial_thread ? 0 : thread_current()->nice);
   t->recent_CPU = FP_CONST_INT(0);
+  t->max_fd = 1; // 0 and 1 are reserved
   list_init(&t->locks_holding);
 
   old_level = intr_disable ();

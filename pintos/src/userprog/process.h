@@ -8,4 +8,12 @@ int process_wait (tid_t);
 void process_exit (void);
 void process_activate (void);
 
+/* File Node */
+struct file_node
+{
+    int file_descriptor;
+    struct list_elem elem;
+    struct file *file;
+};
+
 #endif /* userprog/process.h */
