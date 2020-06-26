@@ -1,8 +1,8 @@
 It is a team project (team members:  @[MintGreenTZ](https://github.com/MintGreenTZ), @[ulitaig](https://github.com/ulitaig), @[sparkmxy](https://github.com/sparkmxy), @[ziqian2000](https://github.com/ziqian2000) ).
 
-**ATTENTION:** If you work in WSL, use `pintos bochs XXXXXX` instead of `pintos --bochs XXXXXX`.  And remember to modify `SIMULATOR` in `Make.var`.
+**ATTENTION:** If you work in WSL, use `pintos bochs XXXXXX` instead of `pintos --bochs XXXXXX`.  And remember to modify `SIMULATOR` in `Make.vars`.
 
-**HELP:** If you have trouble with your environment, click [here](https://github.com/Question406/PintOS/blob/master/build_environment.md); if you have trouble debugging with GDB, click [here](https://github.com/Question406/PintOS/blob/master/debug_with_gdb.md). But first, read the documentation below (cloned from [here](https://github.com/LiJiasen-00921/PintOS-Assignment)).
+**HELP:** If you have trouble with your environment, click [here](https://github.com/Question406/PintOS/blob/master/build_environment.md); if you have trouble debugging with GDB, click [here](https://github.com/Question406/PintOS/blob/master/debug_with_gdb.md). But first, read the documentation below (copied from [here](https://github.com/LiJiasen-00921/PintOS-Assignment)).
 
 ---
 

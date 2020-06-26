@@ -7,6 +7,10 @@
 #include <list.h>
 #include <stdint.h>
 #include "fixed_point.h"
+#include "synch.h"
+
+/* Guided by https://stackoverflow.com/questions/52472084/pintos-userprog-all-tests-fail-is-kernel-vaddr */
+// bool threading_started;
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -85,36 +89,55 @@ typedef int tid_t;
    blocked state is on a semaphore wait list. */
 struct thread
   {
-    /* Owned by thread.c. */
-    tid_t tid;                          /* Thread identifier. */
-    enum thread_status status;          /* Thread state. */
-    char name[16];                      /* Name (for debugging purposes). */
-    uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. */
-    struct list_elem allelem;           /* List element for all threads list. */
+   /* Owned by thread.c. */
+   tid_t tid;                          /* Thread identifier. */
+   enum thread_status status;          /* Thread state. */
+   char name[16];                      /* Name (for debugging purposes). */
+   uint8_t *stack;                     /* Saved stack pointer. */
+   int priority;                       /* Priority. */
+   struct list_elem allelem;           /* List element for all threads list. */
 
-    /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
+   /* Shared between thread.c and synch.c. */
+   struct list_elem elem;              /* List element. */
 
-    int64_t remaining_sleeping_ticks;   /* The number of remaining ticks before awakened. */
-    int base_priority;                  /* Base priority. */
-    struct list locks_holding;          /* Holded locks. */
-    struct lock *locks_acquiring;       /* Lock being acquired and waited for. */
+   int64_t remaining_sleeping_ticks;   /* The number of remaining ticks before awakened. */
+   int base_priority;                  /* Base priority. */
+   struct list locks_holding;          /* Holded locks. */
+   struct lock *locks_acquiring;       /* Lock being acquired and waited for. */
 
-    int nice;                           /* Niceness. */
-    fixed_t recent_CPU;                 /* An estimate of the CPU time the thread has used recently. */
+   int nice;                           /* Niceness. */
+   fixed_t recent_CPU;                 /* An estimate of the CPU time the thread has used recently. */
 
-// #ifdef USERPROG
-    /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
 
-    int max_fd;                         /* Maximum value of file descriptor. */
-    struct list file_nodes;             /* List of file nodes. */
-// #endif
+// vvvvvvvvvv USERPROG vvvvvvvvvv
 
-    /* Owned by thread.c. */
-    unsigned magic;                     /* Detects stack overflow. */
+   /* Owned by userprog/process.c. */
+   uint32_t *pagedir;                  /* Page directory. */
+
+   int ret_val;                        /* Return value of process. */
+   int max_fd;                         /* Maximum value of file descriptor. */
+   bool ret_val_saved;                 /* Whether the return value has been saved. */
+   bool dont_print_exit_msg;           /* Don't print exit msg because "The message is optional when a process fails to load." */
+   struct list file_nodes;             /* List of file nodes. */
+   struct list child_ret_data;         /* List of return value of children. */
+   struct thread *parent;              /* Parent process. NULL if it's an orphan. */
+   struct semaphore exec_done_sema1;   /* Used to inform parent of execution result. Means that its parent is waiting for it. */
+   struct semaphore exec_done_sema2;   /* Used to inform parent of execution result. Means that it is waiting for its parent. */
+   struct semaphore exit_sema;         /* Used to inform parent of its exit. */
+   struct file* file_self;              /* Executable of itself. */
+
+// ^^^^^^^^^^ USERPROG ^^^^^^^^^^
+
+   /* Owned by thread.c. */
+   unsigned magic;                     /* Detects stack overflow. */
   };
+
+struct return_data
+{
+   tid_t tid;                           /* That thread's tid. */
+   int ret_val;                         /* Return value. */
+   struct list_elem elem;               /* List element. */
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -163,5 +186,12 @@ void thread_donate_priority(struct thread *);
 void thread_mlfqs_update_load_avg_and_recent_cpu(void);
 void thread_mlfqs_update_priority(struct thread *);
 void thread_mlfqs_increase_recent_CPU(void);
+
+struct thread* get_thread_by_tid(tid_t);
+int get_child_ret_val_by_tid(struct thread *, tid_t);
+
+void thread_preempt(struct thread *);
+
+void make_children_orphans(struct thread*);
 
 #endif /* threads/thread.h */

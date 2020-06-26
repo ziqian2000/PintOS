@@ -7,6 +7,7 @@
 #include <string.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
+#include "userprog/syscall.h"
 #include "userprog/tss.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
@@ -14,7 +15,9 @@
 #include "threads/flags.h"
 #include "threads/init.h"
 #include "threads/interrupt.h"
+#include "threads/malloc.h"
 #include "threads/palloc.h"
+#include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
@@ -40,7 +43,8 @@ process_execute (const char *file_name)
 
   /* Extract the file name without arguments. 
      Don't call strtok_r as file_name is not modifiable. */
-  char real_name[32], *src_ptr, *dst_ptr;
+  const char *src_ptr;
+  char real_name[32], *dst_ptr;
   for (src_ptr = file_name, dst_ptr = real_name; *src_ptr && *src_ptr != ' '; ++src_ptr, ++dst_ptr)
     *dst_ptr = *src_ptr;
   *dst_ptr = '\0';
@@ -67,11 +71,36 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
+  
+  struct thread *t = thread_current();
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
   if (!success) 
-    thread_exit ();
+  {
+    palloc_free_page (file_name);
+    t->tid = -1;
+    t->dont_print_exit_msg = true;
+    ASSERT(t->exec_done_sema1.value == 0);
+    ASSERT(t->exec_done_sema2.value == 0);
+    sema_up(&t->exec_done_sema1); // Wakes up its parent. Means the preparation is done.
+    sema_down(&t->exec_done_sema2); // Then wait util its parent wakes it up 
+    sys_exception_exit();
+  }
+  ASSERT(t->exec_done_sema1.value == 0);
+  ASSERT(t->exec_done_sema2.value == 0);
+
+  /* Deny writing to itself. */
+  t->file_self = filesys_open(file_name);
+  file_deny_write(t->file_self);
+
+  palloc_free_page (file_name);
+
+  /* The following two lines cannot appear before file_deny_write to ensure the filesys_lock
+      is still being holded.
+     Otherwise filesys_lock will be released when performing filesys operation,
+      which is not desired and can cause mystery problems. */
+  sema_up(&t->exec_done_sema1); // Wakes up its parent. Means the preparation is done.
+  sema_down(&t->exec_done_sema2); // Then wait util its parent wakes it up
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -93,9 +122,17 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-  return -1;
+  struct thread *child = get_thread_by_tid(child_tid);
+  if(child != NULL) // The child process is alive, so let's wait for it.
+  {
+    // todo : May be a potential problem if child dies suddenly
+    if(!child->ret_val_saved) // wait until it saves the return value
+      sema_down(&child->exit_sema);
+  }
+
+  return get_child_ret_val_by_tid(thread_current(), child_tid);
 }
 
 /* Free the current process's resources. */
@@ -105,22 +142,63 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  if(!cur->dont_print_exit_msg) printf("%s: exit(%d)\n", cur->name, cur->ret_val);
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
   if (pd != NULL) 
-    {
-      /* Correct ordering here is crucial.  We must set
-         cur->pagedir to NULL before switching page directories,
-         so that a timer interrupt can't switch back to the
-         process page directory.  We must activate the base page
-         directory before destroying the process's page
-         directory, or our active page directory will be one
-         that's been freed (and cleared). */
-      cur->pagedir = NULL;
-      pagedir_activate (NULL);
-      pagedir_destroy (pd);
-    }
+  {
+    /* Correct ordering here is crucial.  We must set
+        cur->pagedir to NULL before switching page directories,
+        so that a timer interrupt can't switch back to the
+        process page directory.  We must activate the base page
+        directory before destroying the process's page
+        directory, or our active page directory will be one
+        that's been freed (and cleared). */
+    cur->pagedir = NULL;
+    pagedir_activate (NULL);
+    pagedir_destroy (pd);
+  }
+
+  /* Close all files. */
+  while(!list_empty(&cur->file_nodes))
+  {
+    struct file_node *fn = list_entry(list_pop_front(&cur->file_nodes), struct file_node, elem);
+    file_close(fn->file);
+    free(fn);
+  }
+
+  /* Record its return value into parent's corresponding list. */
+  struct return_data *ret_data = (struct return_data*) malloc(sizeof(struct return_data));
+  ret_data->tid = cur->tid;
+  ret_data->ret_val = cur->ret_val;
+
+  if(cur->parent != NULL) 
+  {
+    // todo : I don't know how to handle it if its parent dies suddenly. Maybe locking helps?
+    list_push_back(&cur->parent->child_ret_data, &ret_data->elem);
+  }
+  
+  cur->ret_val_saved = true; // Must be before sema_up(&cur->exit_sema); */
+
+  /* Set all children orphans. Otherwise, those children will try to access parent dangerously. */
+  make_children_orphans(cur);
+
+  /* Release child_ret_data. */
+  while(!list_empty(&cur->child_ret_data))
+    free(list_entry(list_pop_front(&cur->child_ret_data), struct return_data, elem));
+
+  /* Make executable writable. */
+  if(cur->file_self != NULL)
+  {
+    file_allow_write(cur->file_self);
+    file_close(cur->file_self);
+  }
+  
+  /* Inform waiting parent. */
+  sema_up(&cur->exit_sema);
+
 }
 
 /* Sets up the CPU for running user code in the current

@@ -4,6 +4,7 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
+#include "devices/timer.h"
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
@@ -92,6 +93,8 @@ thread_init (void)
 {
   ASSERT (intr_get_level () == INTR_OFF);
 
+  // threading_started = false;
+
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
@@ -115,7 +118,7 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
+  
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -207,7 +210,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
   if(priority > thread_current()->priority)
+  {
     thread_yield();
+  }
 
   return tid;
 }
@@ -221,6 +226,8 @@ thread_create (const char *name, int priority,
 void
 thread_block (void) 
 {
+  // if(!threading_started) return;
+
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
@@ -247,6 +254,7 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   list_insert_ordered(&ready_list, &t->elem, (list_less_func *) &thread_cmp_by_priority, NULL);
   t->status = THREAD_READY;
+
   intr_set_level (old_level);
 }
 
@@ -269,7 +277,7 @@ thread_current (void)
      If either of these assertions fire, then your thread may
      have overflowed its stack.  Each thread has less than 4 kB
      of stack, so a few big automatic arrays or moderate
-     recursion can cause stack overflow. */
+     recursion can cause stack overflow. */ 
   ASSERT (is_thread (t));
   ASSERT (t->status == THREAD_RUNNING);
 
@@ -309,6 +317,8 @@ thread_exit (void)
 void
 thread_yield (void) 
 {
+  // if(!threading_started) return;
+
   struct thread *cur = thread_current ();
   enum intr_level old_level;
   
@@ -471,7 +481,6 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
@@ -483,7 +492,16 @@ init_thread (struct thread *t, const char *name, int priority)
   t->nice = (t == initial_thread ? 0 : thread_current()->nice);
   t->recent_CPU = FP_CONST_INT(0);
   t->max_fd = 1; // 0 and 1 are reserved
+  t->ret_val_saved = false;
+  t->parent = NULL;
+  t->dont_print_exit_msg = false;
+  t->file_self = NULL;
+  sema_init(&t->exec_done_sema1, 0);
+  sema_init(&t->exec_done_sema2, 0);
+  sema_init(&t->exit_sema, 0);
+  list_init(&t->file_nodes);
   list_init(&t->locks_holding);
+  list_init(&t->child_ret_data);
 
   old_level = intr_disable ();
   list_insert_ordered(&all_list, &t->allelem, (list_less_func *) &thread_cmp_by_priority, NULL);
@@ -616,7 +634,9 @@ sleeping_thread_check (struct thread *t, void *aux UNUSED)
   {
       t->remaining_sleeping_ticks--;
       if (t->remaining_sleeping_ticks == 0)
-          thread_unblock(t);
+      {
+        thread_unblock(t);
+      }
   }
 }
 
@@ -701,7 +721,7 @@ thread_mlfqs_update_priority(struct thread *t)
   if(t->priority < PRI_MIN) t->priority = PRI_MIN;
 }
 
-/* Increase current thread's recent_CPU by 1 */
+/* Increase current thread's recent_CPU by 1. */
 void
 thread_mlfqs_increase_recent_CPU(void)
 {
@@ -709,4 +729,52 @@ thread_mlfqs_increase_recent_CPU(void)
   struct thread *current_thread = thread_current();
   if(current_thread != idle_thread)
     current_thread->recent_CPU = FP_ADD_INT(current_thread->recent_CPU, 1);
+}
+
+/* Find the thread with tid TID. */
+struct thread*
+get_thread_by_tid(tid_t tid)
+{
+  for(struct list_elem *e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    struct thread *t = list_entry(e, struct thread, allelem);
+    if(t->tid == tid) return t;
+  }
+  return NULL;
+}
+
+/* Find the return value of the child process of T and return its return value if it's terminated. 
+   Should be used ONLY be process_wait()! */
+int 
+get_child_ret_val_by_tid(struct thread *t, tid_t child_tid)
+{
+  for(struct list_elem *e = list_begin(&t->child_ret_data); e != list_end(&t->child_ret_data); e = list_next(e))
+  {
+    struct return_data *ret_data = list_entry(e, struct return_data, elem);
+    if(ret_data->tid == child_tid)
+    {
+      int ret = ret_data->ret_val;
+      ret_data->ret_val = -1; // Each child process can only be waited once.
+      return ret;
+    }
+  }
+  return -1; // not found
+}
+
+void thread_preempt(struct thread *t)
+{
+    if (thread_current() != idle_thread && thread_current()->priority < t->priority )
+    {
+      thread_yield();
+    }
+}
+
+void make_children_orphans(struct thread *die)
+{
+  for(struct list_elem *e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    struct thread *t = list_entry(e, struct thread, allelem);
+    if(t -> parent == die)
+      t->parent = NULL;    
+  }
 }

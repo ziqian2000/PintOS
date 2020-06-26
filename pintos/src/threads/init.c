@@ -115,6 +115,8 @@ pintos_init (void)
   syscall_init ();
 #endif
 
+  // threading_started = true;
+  
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
   serial_init_queue ();
@@ -289,7 +291,12 @@ run_task (char **argv)
   
   printf ("Executing '%s':\n", task);
 #ifdef USERPROG
-  process_wait (process_execute (task));
+  tid_t tid = process_execute (task);
+  struct thread *t = get_thread_by_tid(tid);
+  t->parent = thread_current();
+  sema_down(&t->exec_done_sema1);
+  sema_up(&t->exec_done_sema2);
+  process_wait (tid);
 #else
   run_test (task);
 #endif

@@ -173,6 +173,9 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  thread_tick ();
+
+  /* Wake up sleeping threads. */
   thread_foreach (sleeping_thread_check, NULL);
   if(thread_mlfqs)
   {
@@ -187,7 +190,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
     if(ticks % TIMER_FREQ == 0)
       thread_mlfqs_update_load_avg_and_recent_cpu();
   }
-  thread_tick ();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
