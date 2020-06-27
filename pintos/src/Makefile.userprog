@@ -3,7 +3,7 @@
 $(PROGS): CPPFLAGS += -I$(SRCDIR)/lib/user -I.
 
 # Linker flags.
-$(PROGS): LDFLAGS += -nostdlib -static -Wl,-T,$(LDSCRIPT),-z,max-page-size=0x1000
+$(PROGS): LDFLAGS += -nostdlib -static -Wl,-T,$(LDSCRIPT)
 $(PROGS): LDSCRIPT = $(SRCDIR)/lib/user/user.lds
 
 # Library code shared between kernel and user programs.
@@ -40,8 +40,8 @@ $(foreach prog,$(PROGS),$(eval $(call TEMPLATE,$(prog))))
 
 libc.a: $(LIB_OBJ)
 	rm -f $@
-	$(AR) r $@ $^
-	$(RANLIB) $@
+	ar r $@ $^
+	ranlib $@
 
 clean::
 	rm -f $(PROGS) $(PROGS_OBJ) $(PROGS_DEP)
