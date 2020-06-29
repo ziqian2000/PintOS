@@ -1,15 +1,18 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/directory.h"
 #include "threads/interrupt.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/palloc.h"
 #include "userprog/process.h"
 
 static void syscall_handler (struct intr_frame *);
@@ -31,6 +34,11 @@ int sys_read(int, void*, unsigned);
 int sys_write(int, const void*, unsigned);
 void sys_exception_exit(void);
 
+bool sys_chdir(const char *dir);
+bool sys_mkdir(const char *dir);
+bool sys_readdir(int fd, char *name);
+bool sys_isdir(int fd);
+int sys_inumber(int fd);
 
 static struct file_node* find_file_node(struct thread *t, int file_descriptor);
 static void check_user(const uint8_t *uaddr);
@@ -438,6 +446,56 @@ sys_exception_exit()
   sys_exit(-1);
 }
 
+/* tz's code begin */
+
+bool 
+sys_chdir(const char *udir)
+{
+  char *kdir = copy_string_to_kernel(udir);
+  bool success = filesys_chdir(kdir);
+  palloc_free_page(kdir);
+  return success;
+}
+
+bool sys_mkdir(const char *udir)
+{
+  char *kdir = copy_string_to_kernel(udir);
+  bool success = filesys_create(kdir, 0);
+  palloc_free_page(kdir);
+  return success;
+}
+
+bool sys_readdir(int fd, char *name)
+{
+  struct file_node *fn = seek_dir_fn(fd);
+  char kname[NAME_MAX + 1];
+  bool success = dir_readdir(fn->dir, kname);
+  if (success)
+    copy_out(name, kname, strlen(kname) + 1);
+  return success;
+}
+
+bool sys_isdir(int fd)
+{
+  struct file_node *fn = seek_fn(fd);
+  return fn->dir != NULL;
+}
+
+int  sys_inumber(int fd)
+{
+  if (sys_isdir(fd))
+  {
+    struct file_node *fn = seek_dir_fn(fd);
+    struct inode *inode = dir_get_inode(fn);
+    return inode_get_inumber(inode);
+  }
+  struct file_node *fn = seek_file_fn(fd);
+  struct inode *inode = file_get_inode(fn->file);
+  return inode_get_inumber(inode);
+}
+
+/* tz's code end */
+
 /**************************************** Utility Method ****************************************/
 
 /* Finds the file node with file_descriptor FILE_DESCRIPTOR held by thread T.
@@ -518,3 +576,116 @@ put_user (uint8_t *udst, uint8_t byte)
        : "=&a" (error_code), "=m" (*udst) : "q" (byte));
   return error_code != -1;
 }
+
+/* tz's code begin */
+
+/* Create a copy of string from user memory to kernel memory
+   and return as a page which must be freed with palloc_free_page
+   Align the string with some times of PGSIZE.
+   Call thread_exit() if user access is invalid.
+*/
+static char *
+copy_string_to_kernel(const char *ustr)
+{
+  char *kstr;
+  char *upage;
+  size_t len;
+
+  kstr = palloc_get_page(0);
+  if (kstr == NULL)
+    thread_exit();
+
+  len = 0;
+  for (;;)
+  {
+    upage = pg_round_down(ustr);
+    if (!page_lock(upage, false))// mhb TODO
+      goto lock_error;
+
+    for (; ustr < upage + PGSIZE; ustr++) 
+    {
+      kstr[len++] = *ustr;
+      if (*ustr == '\0') {
+        page_unlock(upage);
+        return kstr;
+      }
+      if (len >= PGSIZE)
+        goto length_exceeded_error;
+    }
+
+    page_unlock(upage);// mhb TODO
+  }
+
+  length_exceeded_error:
+      page_unlock(upage);
+  lock_error:
+    palloc_free_page(kstr);
+    thread_exit;
+}
+
+/* Seek file_node associated with given file_descriptor
+   Terminates the process if no open file_node associated with the file_descriptor
+*/
+static struct file_node *
+seek_fn(int file_descriptor)
+{
+  struct thread *cur_thd = thread_current();
+  struct list_elem *e;
+  for (e = list_begin(&cur_thd->file_nodes); e != list_end(&cur_thd->file_nodes); 
+       e = list_next(e))
+  {
+    struct file_node *fn = list_entry(e, struct file_node, elem);//TODO
+    if (fn->file_descriptor == file_descriptor)
+      return fn;
+  }
+  thread_exit();
+}
+
+/* Seek file_node associated with given file_descriptor
+   Terminates the process if no open file associated with the file_descriptor
+*/
+static struct file_node *
+seek_file_fn(int file_descriptor)
+{
+  struct file_node *fn = seek_fn(file_descriptor);
+  if (fn->file != NULL)
+    return fn;
+  thread_exit();
+}
+
+/* Seek file_node associated with given file_descriptor
+   Terminates the process if no open dir associated with the file_descriptor
+*/
+static struct file_node *
+seek_dir_fn(int file_descriptor)
+{
+  struct file_node *fn = seek_fn(file_descriptor);
+  if (fn->dir != NULL)
+    return fn;
+  thread_exit();
+}
+
+/* Copy SIZE bytes from kernel src to user dst
+   Call thread_exit() if any of the user access is invalid
+*/
+static void
+copy_out (void *dst_, const void *src_, size_t size)
+{
+  uint8_t *dst = dst_;
+  const uint8_t *src = src_;
+
+  while (size > 0) {
+    size_t copy_size = PGSIZE - pg_ofs(dst);
+    if (copy_size > size)
+      copy_size = size;
+    if (!page_lock(dst, false))
+      thread_exit();
+    memcpy(dst, src, copy_size);
+    page_unlock(dst);
+
+    size -= copy_size;
+    src += copy_size;
+    dst += copy_size;
+  }
+}
+/* tz's code end */

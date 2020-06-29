@@ -2,6 +2,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
+#include "thread.h"
 #include "filesys/file.h"
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
@@ -101,3 +102,38 @@ do_format (void)
   free_map_close ();
   printf ("done.\n");
 }
+
+/* tz's code begin */
+
+/* Change current dir to NAME 
+   Return true if success, false if fail
+*/
+bool
+filesys_chdir(const char *name)
+{
+  struct dir *dir = dir_open(resolve_name_to_inode(name));//TODO
+  if (dir == NULL)
+    return false;
+  dir_close(thread_current()->wd);
+  thread_current()->wd = dir;
+  return true;
+}
+
+/* Resolve relative or absolute NAME to inode
+   Return the inode if success, return null pointer if fail
+   Close the returned inode is responsible to caller
+*/
+static struct inode *
+resolve_name_to_inode(const char *name)
+{
+  if (name[0] == '/' && name[1] == '\0')
+  {
+    /* root directory */
+    return inode_open(ROOT_DIR_SECTOR);
+  }
+  struct dir *dir;
+  // TODO
+  return NULL;
+}
+
+/* tz's code end */

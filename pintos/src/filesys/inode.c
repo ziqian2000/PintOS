@@ -343,3 +343,11 @@ inode_length (const struct inode *inode)
 {
   return inode->data.length;
 }
+
+/* tz's code begin */
+block_sector_t
+inode_get_inumber (const struct inode *inode)
+{
+  return inode->sector;
+}
+/* tz's code end */
