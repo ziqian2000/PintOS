@@ -347,7 +347,7 @@ readahead_daemon(void *aux)
         lock_release(&readahead_lock);
 
         // read the block into cache
-        entry = cache_lock(b->sector, NON_EXCLSIVE);
+        entry = cache_lock(b->sector, NON_EXCLUSIVE);
         cache_read(entry);
         cache_unlock(entry);
         

@@ -9,7 +9,7 @@ void cache_flush(void);
 enum lock_type
     {
         EXCLUSIVE,
-        NON_EXCLSIVE
+        NON_EXCLUSIVE
     };
 
 struct cache_entry *cache_lock(block_sector_t , enum lock_type);
