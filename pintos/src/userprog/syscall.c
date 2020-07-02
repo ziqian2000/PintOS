@@ -46,6 +46,11 @@ static int get_user_bytes(void *src, void *dst, size_t size);
 static int get_user (const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
+static char * copy_string_to_kernel(const char *ustr);
+static struct file_node * seek_fn(int file_descriptor);
+static struct file_node * seek_file_fn(int file_descriptor);
+static struct file_node * seek_dir_fn(int file_descriptor);
+static void copy_out (void *dst_, const void *src_, size_t size);
 
 void
 syscall_init (void) 
@@ -600,7 +605,10 @@ copy_string_to_kernel(const char *ustr)
   {
     upage = pg_round_down(ustr);
     if (!page_lock(upage, false))// mhb TODO
-      goto lock_error;
+    {
+      palloc_free_page(kstr);
+      thread_exit();
+    }
 
     for (; ustr < upage + PGSIZE; ustr++) 
     {
@@ -610,17 +618,15 @@ copy_string_to_kernel(const char *ustr)
         return kstr;
       }
       if (len >= PGSIZE)
-        goto length_exceeded_error;
+      {
+        page_unlock(upage);
+        palloc_free_page(kstr);
+        thread_exit();
+      }
     }
 
     page_unlock(upage);// mhb TODO
   }
-
-  length_exceeded_error:
-      page_unlock(upage);
-  lock_error:
-    palloc_free_page(kstr);
-    thread_exit;
 }
 
 /* Seek file_node associated with given file_descriptor
@@ -634,7 +640,7 @@ seek_fn(int file_descriptor)
   for (e = list_begin(&cur_thd->file_nodes); e != list_end(&cur_thd->file_nodes); 
        e = list_next(e))
   {
-    struct file_node *fn = list_entry(e, struct file_node, elem);//TODO
+    struct file_node *fn = list_entry(e, struct file_node, elem);
     if (fn->file_descriptor == file_descriptor)
       return fn;
   }

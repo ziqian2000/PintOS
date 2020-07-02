@@ -105,17 +105,98 @@ do_format (void)
 
 /* tz's code begin */
 
-/* Change current dir to NAME 
-   Return true if success, false if fail
+/* Unzip file name slice from *SRCP to SLICE.
+   Update **SRCP to the next slice for next call.
+   Return 1 if success, 0 if end, -1 if too long.
 */
-bool
-filesys_chdir(const char *name)
+static int
+get_next_slice(char slice[NAME_MAX], const char **srcp)
 {
-  struct dir *dir = dir_open(resolve_name_to_inode(name));//TODO
+  const char *src = *srcp;
+  char *dst = slice;
+
+  /* Continuous slashes equals to one slash (///// = /) */
+  while (*src = '/')
+    src++;
+  if (*src == '\0')
+    return 0;
+
+  while (*src != '/' && *src != '\0')
+  {
+    if (dst < slice + NAME_MAX)
+      *dst++ = *src;
+    else
+      return -1;
+    src++;
+  }
+  *dst = '\0';
+
+  *srcp = src;
+  return 1;
+}
+
+/* Resolve absolute or relative NAME,
+   Store the dir to *DIRP, file_name part to BASE_NAME,
+   Return true if success, false if fail.
+*/
+static bool
+name2entry_resolver(const char *name, struct dir **dirp, char base_name[NAME_MAX + 1])
+{
+  struct inode *inode;
+  struct dir *dir;
+  int success;
+  char slice[NAME_MAX + 1], next_slice[NAME_MAX + 1];
+  const char *back_up;
+
+  /* Set initial return value in case of error */
+  *dirp = NULL;
+  base_name[0] = '\0';
+
+  /* Begin with initial directory */
+  if (name[0] == '/' || thread_current()->wd == NULL)
+    dir = dir_open_root();
+  else
+    dir = dir_reopen(thread_current()->wd);
   if (dir == NULL)
+  {
+    dir_close(dir);
     return false;
-  dir_close(thread_current()->wd);
-  thread_current()->wd = dir;
+  }
+
+  /* Get first name slice */
+  back_up = name;
+  if (get_next_slice(slice, &back_up) <= 0)
+  {
+    dir_close(dir);
+    return false;
+  }
+
+  while ((success = get_next_slice(next_slice, &back_up)) > 0)
+  {
+    if (!dir_lookup(dir, slice, &inode))
+    {
+      dir_close(dir);
+      return false;
+    }
+
+    dir_close(dir);
+    dir = dir_open(inode);
+    if (dir == NULL)
+    {
+      dir_close(dir);
+      return false;
+    }
+
+    strlcpy(slice, next_slice, NAME_MAX + 1);
+  }
+  if (success < 0)
+  {
+    dir_close(dir);
+    return false;
+  }
+
+  *dirp = dir;
+  strlcpy (base_name, slice, NAME_MAX + 1);
   return true;
 }
 
@@ -124,7 +205,7 @@ filesys_chdir(const char *name)
    Close the returned inode is responsible to caller
 */
 static struct inode *
-resolve_name_to_inode(const char *name)
+name2inode_resolver(const char *name)
 {
   if (name[0] == '/' && name[1] == '\0')
   {
@@ -132,8 +213,28 @@ resolve_name_to_inode(const char *name)
     return inode_open(ROOT_DIR_SECTOR);
   }
   struct dir *dir;
-  // TODO
+  char base_name[NAME_MAX + 1];
+  if (name2entry_resolver(name, &dir, base_name))
+  {
+    struct inode *inode;
+    dir_lookup(dir, base_name, &inode);
+    dir_close(dir);
+  }
   return NULL;
+}
+
+/* Change current dir to NAME 
+   Return true if success, false if fail
+*/
+bool
+filesys_chdir(const char *name)
+{
+  struct dir *dir = dir_open(name2inode_resolver(name));
+  if (dir == NULL)
+    return false;
+  dir_close(thread_current()->wd);
+  thread_current()->wd = dir;
+  return true;
 }
 
 /* tz's code end */
