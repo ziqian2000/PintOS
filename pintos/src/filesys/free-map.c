@@ -46,7 +46,7 @@ void
 free_map_release (block_sector_t sector)
 {
   lock_acquire(&free_map_lock);
-  ASSERT (bitmap_all (free_map, sector, cnt));
+  ASSERT (bitmap_test (free_map, sector));
   bitmap_reset(free_map, sector);
   lock_release(&free_map_lock);
 }

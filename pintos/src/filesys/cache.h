@@ -19,7 +19,7 @@ void *cache_read(struct cache_entry *);
 void *cache_setzero(struct cache_entry *);
 
 void cache_dirty(struct cache_entry *);
-void cache_free(struct cache_entry *); 
-void cache_readahead(struct cache_entry *);
+void cache_free(block_sector_t); 
+void cache_readahead(block_sector_t);
 
 #endif 

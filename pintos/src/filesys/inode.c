@@ -142,7 +142,6 @@ inode_open (block_sector_t sector)
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-  block_read (fs_device, inode->sector, &inode->data);
 
   lock_release(&open_inodes_lock);
   return inode;
@@ -182,7 +181,7 @@ enum inode_type type_of_inode(const struct inode *inode)
    If this was the last reference to INODE, frees its memory.
    If INODE was also a removed inode, frees its blocks. */
 
-void inode_erase(block_sector_t sector, int h)
+void inode_erase_recursive(block_sector_t sector, int h)
 {
   if(h > 0)
   {
@@ -190,7 +189,7 @@ void inode_erase(block_sector_t sector, int h)
     block_sector_t *ptrs = cache_read(entry);
     for(int i=0;i< POINTER_MAXN; i++)
       if(ptrs[i])
-        inode_erase(sector, h - 1);
+        inode_erase_recursive(sector, h - 1);
     
     cache_unlock(entry);
   }
@@ -206,10 +205,10 @@ void inode_erase(struct inode *inode)
 
   for(int i = 0; i < SECTOR_MAXN; i++)
     if(disk_inode->sectors[i])
-      inode_erase(disk_inode->sectors[i], get_hierarchy(i));
+      inode_erase_recursive(disk_inode->sectors[i], get_hierarchy(i));
 
   cache_unlock(entry);
-  inode_erase(inode->sector, 0); // erase this
+  inode_erase_recursive(inode->sector, 0); // erase this
 }
 
 void
@@ -304,15 +303,24 @@ get_data_block(struct inode *inode, off_t offset, struct cache_entry **entry, bo
       {
         current_sector = current_data[offsets[h]];
 
-        if(++h == hierarchy)  // arrive at the target block
-        {
-          /*readhead optimization can be added here*/
+        if(h == hierarchy - 1)  // arrive at the target block
+        {  
+          /*  read-ahead optimization
+          if(offsets[h] + 1 < DIRECT_SECTOR_MAXN)
+          {
+            uint32_t next_sector = current_data[offsets[h] + 1];
+            if(next_sector && next_sector < block_size(fs_device))
+              cache_readahead(next_sector);
+          }
+          */
+          
           cache_unlock(current_entry);
 
           *entry = cache_lock(current_sector, NON_EXCLUSIVE);
           return true;
         }
         cache_unlock(current_entry);
+        h++;
         continue;
       }
     
@@ -406,7 +414,7 @@ static void update_inode_length(struct inode *inode, off_t length)
 {
   if(length > inode_length(inode))
   {
-    struct cache_entry *entry = cache_lock(inode->sectorm EXCLUSIVE);
+    struct cache_entry *entry = cache_lock(inode->sector, EXCLUSIVE);
     struct inode_disk *disk_inode = cache_read(entry);
     if(length > disk_inode->length)
     {
@@ -483,7 +491,7 @@ inode_deny_write (struct inode *inode)
 {
   lock_acquire(&inode->deny_write_lock);
   while(inode->write_cnt > 0)
-    cond_init(&inode->no_write, &inode->deny_write_lock);
+    cond_wait(&inode->no_write, &inode->deny_write_lock);
   inode->deny_write_cnt++;
   ASSERT (inode->deny_write_cnt <= inode->open_cnt);
   lock_release(&inode->deny_write_lock);
@@ -527,11 +535,3 @@ inode_unlock (struct inode *inode)
 {
   lock_release(&inode->lock);
 }
-
-/* tz's code begin */
-block_sector_t
-inode_get_inumber (const struct inode *inode)
-{
-  return inode->sector;
-}
-/* tz's code end */
