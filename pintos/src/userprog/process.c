@@ -21,23 +21,20 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-#ifdef VM
 #include "vm/frame.h"
 #include "vm/swap.h"
 #include "vm/page.h"
-#endif
 
 static thread_func start_process NO_RETURN;
 static bool load (char *cmdline, void (**eip) (void), void **esp);
 static void mmap_clear (struct list *mmap_list);
 static void clear_mmap_entry (struct list_elem *e);
-
-
 struct exec_info
   {
     const char *file_name;
     struct dir *wd;
   };
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -67,7 +64,7 @@ process_execute (const char *file_name)
   char real_name[32], *dst_ptr;
   for (src_ptr = file_name, dst_ptr = real_name; *src_ptr && *src_ptr != ' '; ++src_ptr, ++dst_ptr)
     *dst_ptr = *src_ptr;
-  *dst_ptr = '\0'; 
+  *dst_ptr = '\0';
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (real_name, PRI_DEFAULT, start_process, &exec);
@@ -83,9 +80,6 @@ start_process (void *exec_)
   struct exec_info *exec = exec_;
   struct intr_frame if_;
   bool success;
-  #ifdef VM
-  spt_init (&thread_current()->spt);
-  #endif
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);

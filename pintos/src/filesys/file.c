@@ -11,6 +11,23 @@ struct file
     bool deny_write;            /* Has file_deny_write() been called? */
   };
 
+
+struct inode *
+file_create (block_sector_t sector, off_t length) 
+{
+  struct inode *inode = inode_create (sector, FILE_NODE);
+  if (inode != NULL && length > 0
+      && inode_write_at (inode, "", 1, length - 1) != 1)
+    {
+      inode_remove (inode); 
+      inode_close (inode);
+      inode = NULL;
+    }
+  printf("%d",(int)inode);
+  return inode;
+}
+
+
 /* Opens a file for the given INODE, of which it takes ownership,
    and returns the new file.  Returns a null pointer if an
    allocation fails or if INODE is null. */

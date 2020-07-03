@@ -213,34 +213,3 @@ spt_link_mmap (struct file *file, off_t ofs, uint8_t *upage,
 
   return hash_insert (&thread_current ()->spt, &spte->elem) == NULL;
 }
-
-/* tz's code begin */
-
-/* Try to lock page containing ADDR to physical memory
-   The page must be writable if TO_BE_WRITTEN is true.
-   Return true if success, false if fail.
-*/
-bool
-page_lock (const void *addr, bool to_be_written)
-{
-  /*struct page *p = page_for_addr (addr);
-  if (p == NULL || (p->read_only && to_be_written))
-    return false;
-  
-  frame_lock (p);
-  if (p->frame == NULL)
-    return (do_page_in (p)
-            && pagedir_set_page (thread_current ()->pagedir, p->addr, p->frame->base, !p->read_only)); 
-  else
-    return true;*/
-}
-
-void
-page_unlock (const void *addr) 
-{
-  /*struct page *p = page_for_addr (addr);
-  ASSERT (p != NULL);
-  frame_unlock (p->frame);*/
-}
-
-/* tz's code end */

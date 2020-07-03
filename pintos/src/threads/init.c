@@ -23,12 +23,11 @@
 #include "threads/pte.h"
 #include "threads/thread.h"
 
-#ifdef VM
+#ifdef VM 
 #include "vm/page.h"
 #include "vm/swap.h"
 #include "vm/frame.h"
-#endif
-
+#endif VM
 
 #ifdef USERPROG
 #include "userprog/process.h"

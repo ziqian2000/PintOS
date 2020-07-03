@@ -18,7 +18,6 @@ struct file_node
     int file_descriptor;
     struct list_elem elem;
     struct file *file;
-    struct dir *dir;
 };
 
 #endif /* userprog/process.h */

@@ -98,9 +98,6 @@ struct thread
    int priority;                       /* Priority. */
    struct list_elem allelem;           /* List element for all threads list. */
 
-   /* Owned by syscall.c. */
-   struct dir *wd;                     /* Working directory. */
-
    /* Shared between thread.c and synch.c. */
    struct list_elem elem;              /* List element. */
 
@@ -130,6 +127,8 @@ struct thread
    struct semaphore exec_done_sema2;   /* Used to inform parent of execution result. Means that it is waiting for its parent. */
    struct semaphore exit_sema;         /* Used to inform parent of its exit. */
    struct file* file_self;              /* Executable of itself. */
+
+   struct dir *wd;                     /* Working directory. */
 
    /* mmap use */
     int mapid;
