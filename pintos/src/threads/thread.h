@@ -5,6 +5,7 @@
 
 #include <debug.h>
 #include <list.h>
+#include <hash.h>
 #include <stdint.h>
 #include "fixed_point.h"
 #include "synch.h"
@@ -113,6 +114,7 @@ struct thread
 
    /* Owned by userprog/process.c. */
    uint32_t *pagedir;                  /* Page directory. */
+   struct hash spt;
 
    int ret_val;                        /* Return value of process. */
    int max_fd;                         /* Maximum value of file descriptor. */
@@ -125,6 +127,10 @@ struct thread
    struct semaphore exec_done_sema2;   /* Used to inform parent of execution result. Means that it is waiting for its parent. */
    struct semaphore exit_sema;         /* Used to inform parent of its exit. */
    struct file* file_self;              /* Executable of itself. */
+
+   /* mmap use */
+    int mapid;
+    struct list mmap_list;
 
 // ^^^^^^^^^^ USERPROG ^^^^^^^^^^
 

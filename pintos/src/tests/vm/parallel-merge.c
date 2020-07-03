@@ -31,6 +31,8 @@ init (void)
   arc4_crypt (&arc4, buf1, sizeof buf1);
   for (i = 0; i < sizeof buf1; i++)
     histogram[buf1[i]]++;
+    
+    //printf("%d %d\n", buf1[5],buf1[10]);
 }
 
 /* Sort each chunk of buf1 using SUBPROCESS,

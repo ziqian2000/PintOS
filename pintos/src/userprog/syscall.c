@@ -1,8 +1,10 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include "devices/shutdown.h"
 #include "devices/input.h"
+#include "pagedir.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "threads/interrupt.h"
@@ -11,6 +13,12 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "userprog/process.h"
+#include "userprog/exception.h"
+
+#include "vm/frame.h"
+#include "vm/swap.h"
+#include "vm/page.h"
+
 
 static void syscall_handler (struct intr_frame *);
 
@@ -27,9 +35,12 @@ int sys_filesize(int);
 void sys_seek(int, unsigned);
 unsigned sys_tell(int);
 void sys_close(int);
-int sys_read(int, void*, unsigned);
+static int sys_read(int, void *, unsigned);
 int sys_write(int, const void*, unsigned);
 void sys_exception_exit(void);
+static int sys_mmap(int fd, void *addr);  
+static void sys_munmap(int map);
+static void get_syscall_arg(struct intr_frame *, uint32_t *, int);
 
 
 static struct file_node* find_file_node(struct thread *t, int file_descriptor);
@@ -37,6 +48,59 @@ static void check_user(const uint8_t *uaddr);
 static int get_user_bytes(void *src, void *dst, size_t size);
 static int get_user (const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
+
+static void get_syscall_arg(struct intr_frame *, uint32_t *, int);
+
+
+static struct spt_entry *
+check_and_pin_addr (void *addr, void *esp)
+{
+  struct spt_entry *spte = get_spte (addr);
+  if (spte != NULL)
+  {
+    spt_load (spte);
+  }
+  else
+  {
+    if (is_stack_growth (addr, esp))
+    {
+      if (!spt_stack_growth (addr)) 
+        sys_exit (-1);
+    } 
+    else 
+    {
+      sys_exit (-1);
+    }
+  }
+  return spte;
+}
+
+static void
+check_and_pin_buffer(void *uaddr, unsigned int len, void *esp, bool write)
+{
+  for (const void *addr = uaddr; addr < uaddr + len; ++addr)
+  {
+    if (!is_valid_user_addr (addr)) sys_exit (-1);
+    struct spt_entry *spte = check_and_pin_addr (addr, esp);
+    if (spte != NULL && write && !spte->writeable) sys_exit (-1);
+  }
+}
+
+static void 
+unpin_addr (void *addr)
+{
+  struct spt_entry *spte = get_spte (addr);
+  if (spte != NULL) 
+    spte->pinned = false;
+}
+
+static void
+unpin_buffer (void *uaddr, unsigned int len)
+{
+  for (void *addr = uaddr; addr < uaddr + len; ++addr)
+    unpin_addr (addr);
+}
+
 
 
 void
@@ -60,11 +124,15 @@ syscall_handler (struct intr_frame *f)
 
   switch (call_number)
   {
+
+    uint32_t syscall_args[4];
+
   case SYS_HALT: // 0
     {
       sys_halt();
       NOT_REACHED();
       break;
+      
     }
   case SYS_EXIT: // 1
     {
@@ -73,7 +141,10 @@ syscall_handler (struct intr_frame *f)
 
       sys_exit(exitcode);
       NOT_REACHED();
+
+
       break;
+      
     }
 
   case SYS_EXEC: // 2
@@ -83,6 +154,7 @@ syscall_handler (struct intr_frame *f)
 
       int return_code = sys_exec((const char*) cmdline);
       f->eax = (uint32_t) return_code;
+
       break;
     }
 
@@ -93,6 +165,8 @@ syscall_handler (struct intr_frame *f)
 
       int ret = sys_wait(tid);
       f->eax = (uint32_t) ret;
+
+
       break;
     }
 
@@ -107,6 +181,7 @@ syscall_handler (struct intr_frame *f)
 
       return_code = sys_create(filename, initial_size);
       f->eax = return_code;
+
       break;
     }
 
@@ -119,6 +194,8 @@ syscall_handler (struct intr_frame *f)
 
       return_code = sys_remove(filename);
       f->eax = return_code;
+
+
       break;
     }
 
@@ -131,6 +208,8 @@ syscall_handler (struct intr_frame *f)
 
       return_code = sys_open(filename);
       f->eax = return_code;
+
+
       break;
     }
 
@@ -141,22 +220,17 @@ syscall_handler (struct intr_frame *f)
 
       return_code = sys_filesize(fd);
       f->eax = return_code;
+
+
       break;
     }
 
   case SYS_READ: // 8
     {
-      int fd, return_code;
-      void *buffer;
-      unsigned size;
-
-      get_user_bytes(f->esp + 4, &fd, sizeof(fd));
-      get_user_bytes(f->esp + 8, &buffer, sizeof(buffer));
-      get_user_bytes(f->esp + 12, &size, sizeof(size));
-
-
-      return_code = sys_read(fd, buffer, size);
-      f->eax = (uint32_t) return_code;
+      get_syscall_arg(f, syscall_args, 3);
+      check_and_pin_buffer ((void *)syscall_args[1], syscall_args[2], f->esp, true);
+      f->eax = sys_read(syscall_args[0], (void *)syscall_args[1], syscall_args[2]);
+      unpin_buffer ((void *)syscall_args[1], syscall_args[2]);
       break;
     }
 
@@ -172,6 +246,8 @@ syscall_handler (struct intr_frame *f)
 
       return_code = sys_write(fd, buffer, size);
       f->eax = (uint32_t) return_code;
+
+
       break;
     }
 
@@ -207,6 +283,21 @@ syscall_handler (struct intr_frame *f)
       sys_close(fd);
       break;
     }
+  case SYS_MMAP:
+    {
+      uint32_t syscall_args[4];
+      get_syscall_arg(f, syscall_args, 2);
+      f->eax = sys_mmap(syscall_args[0], (void *)syscall_args[1]);
+      break;
+    }
+  case SYS_MUNMAP:
+    {
+      uint32_t syscall_args[4];
+      get_syscall_arg(f, syscall_args, 1);
+      sys_munmap(syscall_args[0]);
+      break;
+    }
+    
   default:
     {
       NOT_REACHED();
@@ -230,7 +321,7 @@ sys_exec(const char *cmd_line)
 {
   check_user((const uint8_t*) cmd_line);
 
-  lock_acquire(&filesys_lock);
+  //lock_acquire(&filesys_lock);
   tid_t tid = process_execute(cmd_line);
   struct thread *t = get_thread_by_tid(tid);
   ASSERT(t != NULL);
@@ -243,7 +334,7 @@ sys_exec(const char *cmd_line)
   ASSERT(t->exec_done_sema2.value == 0);
   sema_up(&t->exec_done_sema2);
 
-  lock_release(&filesys_lock);
+  //lock_release(&filesys_lock);
   return ret;
 }
 
@@ -293,40 +384,6 @@ sys_close(int fd)
   lock_release(&filesys_lock);
 }
 
-int
-sys_read(int fd, void *buffer, unsigned size)
-{
-  /* Verify the memory [buffer, buffer + size). */
-  check_user((uint8_t *) buffer);
-  check_user((uint8_t *) buffer + size - 1);
-  int ret_val;
-
-  lock_acquire(&filesys_lock);
-
-  if(fd == 0) // read from keyboard
-  {
-    for(unsigned i = 0; i < size; i++)
-    {
-      if(!put_user(buffer + i, input_getc()))
-      {
-        sys_exception_exit();
-      }
-    }
-    ret_val = size;
-  }
-  else // read from file
-  {
-    struct file_node *fn = find_file_node(thread_current(), fd);
-    if(fn)
-      ret_val = file_read(fn->file, buffer, size);
-    else
-      ret_val = -1;
-    
-  }
-
-  lock_release(&filesys_lock);
-  return ret_val;
-}
 
 int
 sys_write(int fd, const void *buffer, unsigned size)
@@ -505,16 +562,99 @@ get_user (const uint8_t *uaddr)
   return result;
 }
  
-/* Writes BYTE to user address UDST.
-   UDST must be below PHYS_BASE.
-   Returns true if successful, false if a segfault occurred. */
-static bool
-put_user (uint8_t *udst, uint8_t byte)
-{
-  if(!is_user_vaddr(udst)) return -1;
 
-  int error_code;
-  asm ("movl $1f, %0; movb %b2, %1; 1:"
-       : "=&a" (error_code), "=m" (*udst) : "q" (byte));
-  return error_code != -1;
+
+//VM
+static struct file_node *
+get_fdstruct(int fd)
+{
+  struct list_elem *e;
+
+  for (e = list_begin(&thread_current()->file_nodes);
+       e != list_end(&thread_current()->file_nodes);
+       e = list_next(e))
+  {
+    struct file_node *f = list_entry(e, struct file_node, elem);
+    if (f->file_descriptor == fd)
+      return f;
+  }
+  return NULL;
 }
+
+static int
+sys_mmap(int fd, void *addr)
+{
+  struct file_node *fd_s = get_fdstruct(fd);
+  int r = file_length (fd_s->file);
+  if (!fd_s || !is_valid_user_addr (addr) || ((uint32_t) addr % PGSIZE) != 0 || r == 0)
+  {
+    return -1;
+  }
+  
+  struct file *file = file_reopen (fd_s->file);
+  off_t ofs = 0;
+  uint32_t read_bytes = r;
+  uint32_t zero_bytes = 0;
+  while (read_bytes > 0)
+  {
+    uint32_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+    uint32_t page_zero_bytes = PGSIZE - page_read_bytes;
+    
+    if (!spt_link_mmap (file, ofs, addr, page_read_bytes, page_zero_bytes, true)) return -1;
+    
+    read_bytes -= page_read_bytes;
+    zero_bytes -= page_zero_bytes;
+    ofs += page_read_bytes;
+    addr += PGSIZE;
+  }
+
+  return thread_current ()->mapid++;
+}
+
+static void
+sys_munmap(int map)
+{
+  remove_mapid (&thread_current ()->mmap_list, map);
+}
+
+static void
+get_syscall_arg(struct intr_frame *f, uint32_t *buffer, int argc)
+{
+
+  uint32_t *ptr;
+  for (ptr = (uint32_t *)f->esp + 1; argc > 0; ++buffer, --argc, ++ptr)
+  {
+    check_and_pin_addr (ptr, sizeof(uint32_t));
+    *buffer = *ptr;
+  }
+}
+
+static int
+sys_read(int fd, void *buffer, unsigned size)
+{ 
+  lock_acquire(&filesys_lock);
+  if (fd == 0)
+  {
+
+    return 0;
+  }
+  else if (fd == 1)
+  {
+    lock_release(&filesys_lock);
+    sys_exit(-1);
+    return -1;
+  }
+  else
+  {
+    struct file_node *fd_s = get_fdstruct(fd);
+    if (!fd_s)
+    {
+      lock_release(&filesys_lock);
+      return -1;
+    }
+    int r = file_read(fd_s->file, buffer, size);
+    lock_release(&filesys_lock);
+    return r;
+  }
+}
+

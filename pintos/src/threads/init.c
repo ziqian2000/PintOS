@@ -22,6 +22,14 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+
+#ifdef VM
+#include "vm/page.h"
+#include "vm/swap.h"
+#include "vm/frame.h"
+#endif
+
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -37,6 +45,8 @@
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
 #endif
+
+
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
@@ -97,7 +107,15 @@ pintos_init (void)
   /* Initialize memory system. */
   palloc_init (user_page_limit);
   malloc_init ();
+
+#ifdef VM
+  frame_table_init ();
+#endif
+
   paging_init ();
+
+
+
 
   /* Segmentation. */
 #ifdef USERPROG
@@ -126,6 +144,7 @@ pintos_init (void)
   /* Initialize file system. */
   ide_init ();
   locate_block_devices ();
+  swap_init ();
   filesys_init (format_filesys);
 #endif
 

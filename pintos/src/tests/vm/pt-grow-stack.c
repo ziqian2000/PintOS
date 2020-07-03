@@ -13,7 +13,12 @@ test_main (void)
   char stack_obj[4096];
   struct arc4 arc4;
 
+ //msg("BEFPRORE arc4_init");
+
   arc4_init (&arc4, "foobar", 6);
+  
+  //msg("after arc4_init");
+  
   memset (stack_obj, 0, sizeof stack_obj);
   arc4_crypt (&arc4, stack_obj, sizeof stack_obj);
   msg ("cksum: %lu", cksum (stack_obj, sizeof stack_obj));

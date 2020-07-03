@@ -102,7 +102,12 @@ hash_insert (struct hash *h, struct hash_elem *new)
   struct hash_elem *old = find_elem (h, bucket, new);
 
   if (old == NULL) 
+  {
+    //puts("Shite");
     insert_elem (h, bucket, new);
+  }
+  if (old == NULL) 
+  //puts("Shite2");
 
   rehash (h);
 
@@ -416,6 +421,8 @@ rehash (struct hash *h)
 static void
 insert_elem (struct hash *h, struct list *bucket, struct hash_elem *e) 
 {
+  //puts("Fuck");
+  //printf("======[c]  %d\n",h->elem_cnt);
   h->elem_cnt++;
   list_push_front (bucket, &e->list_elem);
 }

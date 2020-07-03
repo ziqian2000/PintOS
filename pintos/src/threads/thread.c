@@ -506,6 +506,11 @@ init_thread (struct thread *t, const char *name, int priority)
   old_level = intr_disable ();
   list_insert_ordered(&all_list, &t->allelem, (list_less_func *) &thread_cmp_by_priority, NULL);
   intr_set_level (old_level);
+
+  #ifdef VM
+  t->mapid = 0;
+  list_init (&t->mmap_list);
+  #endif
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
