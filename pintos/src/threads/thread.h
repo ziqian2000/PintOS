@@ -98,6 +98,9 @@ struct thread
    int priority;                       /* Priority. */
    struct list_elem allelem;           /* List element for all threads list. */
 
+   /* Owned by syscall.c. */
+   struct dir *wd;                     /* Working directory. */
+
    /* Shared between thread.c and synch.c. */
    struct list_elem elem;              /* List element. */
 

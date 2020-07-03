@@ -7,11 +7,13 @@
 #include "pagedir.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/directory.h"
 #include "threads/interrupt.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/palloc.h"
 #include "userprog/process.h"
 #include "userprog/exception.h"
 
@@ -42,6 +44,11 @@ static int sys_mmap(int fd, void *addr);
 static void sys_munmap(int map);
 static void get_syscall_arg(struct intr_frame *, uint32_t *, int);
 
+bool sys_chdir(const char *dir);
+bool sys_mkdir(const char *dir);
+bool sys_readdir(int fd, char *name);
+bool sys_isdir(int fd);
+int sys_inumber(int fd);
 
 static struct file_node* find_file_node(struct thread *t, int file_descriptor);
 static void check_user(const uint8_t *uaddr);
@@ -494,6 +501,56 @@ sys_exception_exit()
     lock_release(&filesys_lock);
   sys_exit(-1);
 }
+
+/* tz's code begin */
+
+bool 
+sys_chdir(const char *udir)
+{
+  char *kdir = copy_string_to_kernel(udir);
+  bool success = filesys_chdir(kdir);
+  palloc_free_page(kdir);
+  return success;
+}
+
+bool sys_mkdir(const char *udir)
+{
+  char *kdir = copy_string_to_kernel(udir);
+  bool success = filesys_create(kdir, 0);
+  palloc_free_page(kdir);
+  return success;
+}
+
+bool sys_readdir(int fd, char *name)
+{
+  struct file_node *fn = seek_dir_fn(fd);
+  char kname[NAME_MAX + 1];
+  bool success = dir_readdir(fn->dir, kname);
+  if (success)
+    copy_out(name, kname, strlen(kname) + 1);
+  return success;
+}
+
+bool sys_isdir(int fd)
+{
+  struct file_node *fn = seek_fn(fd);
+  return fn->dir != NULL;
+}
+
+int  sys_inumber(int fd)
+{
+  if (sys_isdir(fd))
+  {
+    struct file_node *fn = seek_dir_fn(fd);
+    struct inode *inode = dir_get_inode(fn);
+    return inode_get_inumber(inode);
+  }
+  struct file_node *fn = seek_file_fn(fd);
+  struct inode *inode = file_get_inode(fn->file);
+  return inode_get_inumber(inode);
+}
+
+/* tz's code end */
 
 /**************************************** Utility Method ****************************************/
 
