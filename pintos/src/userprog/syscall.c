@@ -56,6 +56,12 @@ static int get_user_bytes(void *src, void *dst, size_t size);
 static int get_user (const uint8_t *uaddr);
 static bool put_user (uint8_t *udst, uint8_t byte);
 
+static char * copy_string_to_kernel(const char *ustr);
+static struct file_node * seek_fn(int file_descriptor);
+static struct file_node * seek_file_fn(int file_descriptor);
+static struct file_node * seek_dir_fn(int file_descriptor);
+static void copy_out (void *dst_, const void *src_, size_t size);
+
 static void get_syscall_arg(struct intr_frame *, uint32_t *, int);
 
 
