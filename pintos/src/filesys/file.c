@@ -23,7 +23,6 @@ file_create (block_sector_t sector, off_t length)
       inode_close (inode);
       inode = NULL;
     }
-  printf("%d",(int)inode);
   return inode;
 }
 

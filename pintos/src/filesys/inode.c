@@ -16,6 +16,11 @@
 #define SECTOR_MAXN 125
 #define POINTER_MAXN ((off_t) (BLOCK_SECTOR_SIZE / sizeof (block_sector_t)))
 
+#define INODE_BYTE_MAXN ((DIRECT_SECTOR_MAXN                \
+                     + POINTER_MAXN                    \
+                     + POINTER_MAXN * POINTER_MAXN) \
+                    * BLOCK_SECTOR_SIZE)
+
 /* On-disk inode.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
@@ -269,6 +274,8 @@ resolve_offset(off_t sector_id, size_t offset[])
     return 2;
   }
 
+  sector_id -= POINTER_MAXN;
+
   if(sector_id < POINTER_MAXN * POINTER_MAXN)
   {
     offset[0] = DIRECT_SECTOR_MAXN + 1 + sector_id/(POINTER_MAXN * POINTER_MAXN);
@@ -286,8 +293,9 @@ resolve_offset(off_t sector_id, size_t offset[])
   return NULL if fails
 */
 static bool 
-get_data_block(struct inode *inode, off_t offset, struct cache_entry **entry, bool allocate)
+get_data_block(struct inode *inode, off_t offset, bool allocate, struct cache_entry **entry)
 {
+
   size_t offsets[3];
   size_t hierarchy = resolve_offset(offset / BLOCK_SECTOR_SIZE, offsets);
   size_t h = 0;
@@ -348,6 +356,7 @@ get_data_block(struct inode *inode, off_t offset, struct cache_entry **entry, bo
       *entry = NULL;
       return false;
     }
+    
 
     cache_dirty(current_entry);
 
@@ -361,7 +370,6 @@ get_data_block(struct inode *inode, off_t offset, struct cache_entry **entry, bo
       *entry = new_entry;
       return true;
     }
-
     // go down to next hierarchy  
     cache_unlock(new_entry);
   }
@@ -383,7 +391,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       struct cache_entry *entry;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
-      off_t inode_left = inode_length (inode) - offset;
+      off_t inode_left = INODE_BYTE_MAXN - offset;
       int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
       int min_left = inode_left < sector_left ? inode_left : sector_left;
 
@@ -436,12 +444,14 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 {
   const uint8_t *buffer = buffer_;
   off_t bytes_written = 0;
-  uint8_t *bounce = NULL;
 
   // deny-write check
   lock_acquire(&inode->deny_write_lock);
   if (inode->deny_write_cnt)
+  {
+    lock_release(&inode->deny_write_lock);
     return 0;
+  }
 
   inode->write_cnt++;
   lock_release(&inode->deny_write_lock);
@@ -453,16 +463,16 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
-      off_t inode_left = inode_length (inode) - offset;
+      off_t inode_left = INODE_BYTE_MAXN - offset;
       int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
       int min_left = inode_left < sector_left ? inode_left : sector_left;
 
       /* Number of bytes to actually write into this sector. */
       int chunk_size = size < min_left ? size : min_left;
-
-      if (chunk_size <= 0 || !get_data_block(inode, offset, true, &entry))  // ALLOCATE = TRUE: allocate new block if write beyond EOF
+      
+      if (chunk_size <= 0 || !get_data_block(inode, offset, true, &entry)){  // ALLOCATE = TRUE: allocate new block if write beyond EOF
         break;
-
+      }
       uint8_t *data = cache_read(entry);
       memcpy(data + sector_ofs, buffer + bytes_written, chunk_size);
       cache_dirty(entry);

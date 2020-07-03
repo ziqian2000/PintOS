@@ -56,10 +56,12 @@ cache_init(void)
         cond_init(&b->no_need);
         cond_init(&b->no_writers);
         b->sector = INVALID_SECTOR; // initially free
+        b->write_cnt = b->write_wait_cnt = 0;
+        b->read_cnt = b->read_wait_cnt = 0;
         lock_init(&b->data_lock);
     }
-    flush_daemon_init();
-    read_ahead_daemon_init();
+    //flush_daemon_init();
+    //read_ahead_daemon_init();
 }
 
 
@@ -88,6 +90,8 @@ cache_flush(void)
     }
 }
 
+
+/*The call must hold <cache_sync>*/
 struct cache_entry *
 cache_find(block_sector_t sector, enum lock_type type)
 {
@@ -97,7 +101,8 @@ cache_find(block_sector_t sector, enum lock_type type)
         lock_acquire(&b->entry_lock);
         if(b->sector == sector)
         {  // found
-            if(type == EXCLUSIVE)
+            lock_release(&cache_sync);
+            if(type == NON_EXCLUSIVE)
             {
                 b->read_wait_cnt++;
                 if(b->write_cnt || b->write_wait_cnt)
@@ -136,10 +141,7 @@ cache_try_lock(block_sector_t sector, enum lock_type type, bool *evicted)
 
     struct cache_entry *entry = cache_find(sector, type);
     if(entry != NULL)
-    {
-        lock_release(&cache_sync);
         return entry;
-    }
 
     // Not in cache. Find a free entry;
     for(int i = 0;i<CACHE_MAX;i++)
@@ -187,8 +189,8 @@ cache_try_lock(block_sector_t sector, enum lock_type type, bool *evicted)
             b->write_cnt = 0;
             if(!b->read_wait_cnt && !b->write_wait_cnt)  // no one is waiting for it, ok for evicting
                 b->sector = INVALID_SECTOR;
-            else{  // give to the waiter
-                if(b->read_wait_cnt)
+            else{  
+                if(b->read_wait_cnt)// give to the waiter
                     cond_broadcast(&b->no_writers, &b->entry_lock);
                 else 
                     cond_signal(&b->no_need, &b->entry_lock);
@@ -196,7 +198,6 @@ cache_try_lock(block_sector_t sector, enum lock_type type, bool *evicted)
 
             *evicted = true;
             lock_release(&b->entry_lock);
-            lock_release(&cache_sync);
             return NULL;
         }
         lock_release(&b->entry_lock);
@@ -211,7 +212,7 @@ cache_lock(block_sector_t sector, enum lock_type type)
 {
     while(true)         // try again after 1000ms if fails 
     {
-       struct cache_entry *entry;
+       struct cache_entry *entry = NULL;
        while (true)   // retry immediately if eviction happens
        {
             bool evicted = false;
