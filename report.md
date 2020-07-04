@@ -53,7 +53,7 @@
 
 ``cache`` 模块中实现了定时flush 和 readahead 两个独立运行的线程, 但由于对多线程的支持较差，加上后会导致一些点不能通过测试，故舍弃之。
 
-## Result
+## 结果
 
 ![threads](asset/threads_result.PNG)
 
