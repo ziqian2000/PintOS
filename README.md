@@ -5,13 +5,3 @@ Requirements are [here](https://github.com/LiJiasen-00921/PintOS-Assignment).
 More details are available in our report.
 
 Done at 2020/7/4, at home, during the spread of COVID-19.
-
-### Result
-
-![threads](asset/threads_result.PNG)
-
-![userprog](asset/userprog_result.PNG)
-
-![vm](asset/vm_result.PNG)
-
-![filesys](asset/filesys_result.PNG)
