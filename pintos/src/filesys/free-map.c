@@ -66,6 +66,8 @@ free_map_open (void)
 void
 free_map_close (void) 
 {
+  if (!bitmap_write (free_map, free_map_file))
+    PANIC ("can't write free map");
   file_close (free_map_file);
 }
 

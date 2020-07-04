@@ -300,6 +300,8 @@ get_data_block(struct inode *inode, off_t offset, bool allocate, struct cache_en
   size_t hierarchy = resolve_offset(offset / BLOCK_SECTOR_SIZE, offsets);
   size_t h = 0;
 
+  size_t cnt = 0;
+
   block_sector_t current_sector = inode->sector;
   while(true)
   {
@@ -391,7 +393,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       struct cache_entry *entry;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
-      off_t inode_left = INODE_BYTE_MAXN - offset;
+      off_t inode_left = inode_length (inode) - offset;
       int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
       int min_left = inode_left < sector_left ? inode_left : sector_left;
 

@@ -128,8 +128,6 @@ struct thread
    struct semaphore exit_sema;         /* Used to inform parent of its exit. */
    struct file* file_self;              /* Executable of itself. */
 
-   struct dir *wd;                     /* Working directory. */
-
    /* mmap use */
     int mapid;
     struct list mmap_list;

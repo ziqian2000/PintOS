@@ -21,19 +21,16 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#ifdef VM
 #include "vm/frame.h"
 #include "vm/swap.h"
 #include "vm/page.h"
+#endif
 
 static thread_func start_process NO_RETURN;
 static bool load (char *cmdline, void (**eip) (void), void **esp);
 static void mmap_clear (struct list *mmap_list);
 static void clear_mmap_entry (struct list_elem *e);
-struct exec_info
-  {
-    const char *file_name;
-    struct dir *wd;
-  };
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -44,9 +41,6 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
-  struct dir *wd = thread_current()->wd;
-  struct exec_info exec;
-
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
@@ -55,46 +49,46 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-  exec.wd = wd == NULL ? dir_open_root() : dir_reopen(wd);
-  exec.file_name = fn_copy;
-
   /* Extract the file name without arguments. 
      Don't call strtok_r as file_name is not modifiable. */
   const char *src_ptr;
   char real_name[32], *dst_ptr;
   for (src_ptr = file_name, dst_ptr = real_name; *src_ptr && *src_ptr != ' '; ++src_ptr, ++dst_ptr)
     *dst_ptr = *src_ptr;
-  *dst_ptr = '\0';
+  *dst_ptr = '\0'; 
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (real_name, PRI_DEFAULT, start_process, &exec);
-  if (tid == TID_ERROR) dir_close(exec.wd);
+  tid = thread_create (real_name, PRI_DEFAULT, start_process, fn_copy);
+  if (tid == TID_ERROR)
+    palloc_free_page (fn_copy); 
   return tid;
 }
 
 /* A thread function that loads a user process and starts it
    running. */
 static void
-start_process (void *exec_)
+start_process (void *file_name_)
 {
-  struct exec_info *exec = exec_;
+  char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+  #ifdef VM
+  spt_init (&thread_current()->spt);
+  #endif
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (exec->file_name, &if_.eip, &if_.esp);
+  success = load (file_name, &if_.eip, &if_.esp);
   
   struct thread *t = thread_current();
-  t->wd = exec->wd;
 
   /* If load failed, quit. */
   if (!success) 
   {
-    palloc_free_page (exec->file_name);
+    palloc_free_page (file_name);
     t->tid = -1;
     t->dont_print_exit_msg = true;
     ASSERT(t->exec_done_sema1.value == 0);
@@ -107,10 +101,10 @@ start_process (void *exec_)
   ASSERT(t->exec_done_sema2.value == 0);
 
   /* Deny writing to itself. */
-  t->file_self = filesys_open(exec->file_name);
+  t->file_self = filesys_open(file_name);
   file_deny_write(t->file_self);
 
-  palloc_free_page (exec->file_name);
+  palloc_free_page (file_name);
 
   /* The following two lines cannot appear before file_deny_write to ensure the filesys_lock
       is still being holded.

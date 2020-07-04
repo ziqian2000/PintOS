@@ -1,9 +1,9 @@
-#include "cache.h"
-#include "filesys.h"
-#include "../threads/malloc.h"
-#include "../threads/synch.h"
-#include "../threads/thread.h"
-#include "../devices/timer.h"
+#include "filesys/cache.h"
+#include "filesys/filesys.h"
+#include "threads/malloc.h"
+#include "threads/synch.h"
+#include "threads/thread.h"
+#include "devices/timer.h"
 
 #define INVALID_SECTOR ((block_sector_t) - 1)
 
@@ -58,7 +58,6 @@ cache_init(void)
         b->sector = INVALID_SECTOR; // initially free
         b->write_cnt = b->write_wait_cnt = 0;
         b->read_cnt = b->read_wait_cnt = 0;
-        lock_init(&b->data_lock);
     }
     //flush_daemon_init();
     //read_ahead_daemon_init();
