@@ -130,14 +130,10 @@ spt_load (struct spt_entry *spte)
 }
 
 bool
-spt_stack_growth (void *addr)
+spt_stack_growth (const void *addr)
 {
-//puts("!!!");
-
   if ((size_t)(PHYS_BASE - pg_round_down(addr)) > ULIMIT_STACK) return false;
   struct spt_entry *spte = malloc (sizeof (struct spt_entry));
-
-  //printf("======[1]  %d\n",*(int *)addr);
 
   spte->type = PAGE_SWAP;
   spte->addr = pg_round_down (addr);
@@ -147,15 +143,11 @@ spt_stack_growth (void *addr)
 
   uint8_t *frame_addr = frame_get (spte, false);
 
-  //printf("======[2]  %d\n",*frame_addr);
-
   if (frame_addr != NULL)
   { 
     if (install_page(spte->addr, frame_addr, spte->writeable))
     {
-      //printf("======[1]  %d\n",&thread_current()->spt.elem_cnt);
       struct hash_elem *old = hash_insert (&thread_current ()->spt, &spte->elem);
-      //puts("ASDDDDD");
       if (old == NULL) goto success;
     }
   }
@@ -163,7 +155,6 @@ spt_stack_growth (void *addr)
   frame_free (frame_addr);
   return false;
 success:
-//puts("####ASDDDDD");
   return true;
 }
 

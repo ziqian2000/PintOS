@@ -11,7 +11,7 @@ struct file
     bool deny_write;            /* Has file_deny_write() been called? */
   };
 
-
+#ifdef FS
 struct inode *
 file_create (block_sector_t sector, off_t length) 
 {
@@ -25,6 +25,7 @@ file_create (block_sector_t sector, off_t length)
     }
   return inode;
 }
+#endif
 
 
 /* Opens a file for the given INODE, of which it takes ownership,

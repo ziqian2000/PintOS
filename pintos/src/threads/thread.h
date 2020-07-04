@@ -1,7 +1,9 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
-// #define USERPROG // stupid VSCode
+//  #define USERPROG // stupid VSCode
+//  #define VM
+//  #define FILESYS
 
 #include <debug.h>
 #include <list.h>

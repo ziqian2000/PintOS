@@ -59,7 +59,7 @@ unsigned spte_addr (const struct hash_elem *e, void *aux UNUSED);
 bool spte_addr_less (const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED);
 struct spt_entry * get_spte (const void *);
 bool spt_load (struct spt_entry *);
-bool spt_stack_growth (void *);
+bool spt_stack_growth (const void *);
 void spt_remove (struct spt_entry *);
 bool spt_link_elf (struct file *, off_t, uint8_t *,
               uint32_t read_bytes, uint32_t zero_bytes, bool writable);

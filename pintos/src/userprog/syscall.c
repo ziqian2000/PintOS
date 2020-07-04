@@ -40,20 +40,17 @@ int sys_write(int, const void*, unsigned);
 void sys_exception_exit(void);
 static int sys_mmap(int fd, void *addr);  
 static void sys_munmap(int map);
-static void get_syscall_arg(struct intr_frame *, uint32_t *, int);
 
 
 static struct file_node* find_file_node(struct thread *t, int file_descriptor);
 static void check_user(const uint8_t *uaddr);
 static int get_user_bytes(void *src, void *dst, size_t size);
 static int get_user (const uint8_t *uaddr);
-static bool put_user (uint8_t *udst, uint8_t byte);
-
 static void get_syscall_arg(struct intr_frame *, uint32_t *, int);
 
 
 static struct spt_entry *
-check_and_pin_addr (void *addr, void *esp)
+check_and_pin_addr (const void *addr, void *esp)
 {
   struct spt_entry *spte = get_spte (addr);
   if (spte != NULL)
@@ -76,7 +73,7 @@ check_and_pin_addr (void *addr, void *esp)
 }
 
 static void
-check_and_pin_buffer(void *uaddr, unsigned int len, void *esp, bool write)
+check_and_pin_buffer(const void *uaddr, unsigned int len, void *esp, bool write)
 {
   for (const void *addr = uaddr; addr < uaddr + len; ++addr)
   {
@@ -124,9 +121,6 @@ syscall_handler (struct intr_frame *f)
 
   switch (call_number)
   {
-
-    uint32_t syscall_args[4];
-
   case SYS_HALT: // 0
     {
       sys_halt();
@@ -227,10 +221,19 @@ syscall_handler (struct intr_frame *f)
 
   case SYS_READ: // 8
     {
-      get_syscall_arg(f, syscall_args, 3);
-      check_and_pin_buffer ((void *)syscall_args[1], syscall_args[2], f->esp, true);
-      f->eax = sys_read(syscall_args[0], (void *)syscall_args[1], syscall_args[2]);
-      unpin_buffer ((void *)syscall_args[1], syscall_args[2]);
+
+      int fd, return_code;
+      void *buffer;
+      unsigned size;
+
+      get_user_bytes(f->esp + 4, &fd, sizeof(fd));
+      get_user_bytes(f->esp + 8, &buffer, sizeof(buffer));
+      get_user_bytes(f->esp + 12, &size, sizeof(size));
+
+      check_and_pin_buffer (buffer, size, f->esp, true);
+      return_code = sys_read(fd, buffer, size);
+      f->eax = return_code;
+      unpin_buffer (buffer, size);
       break;
     }
 
@@ -624,7 +627,7 @@ get_syscall_arg(struct intr_frame *f, uint32_t *buffer, int argc)
   uint32_t *ptr;
   for (ptr = (uint32_t *)f->esp + 1; argc > 0; ++buffer, --argc, ++ptr)
   {
-    check_and_pin_addr (ptr, sizeof(uint32_t));
+    check_and_pin_addr (ptr, (void *)sizeof(uint32_t));
     *buffer = *ptr;
   }
 }
@@ -633,15 +636,11 @@ static int
 sys_read(int fd, void *buffer, unsigned size)
 { 
   lock_acquire(&filesys_lock);
-  if (fd == 0)
-  {
-
-    return 0;
-  }
+  if (fd == 0) return 0;
   else if (fd == 1)
   {
     lock_release(&filesys_lock);
-    sys_exit(-1);
+    sys_exception_exit();
     return -1;
   }
   else
