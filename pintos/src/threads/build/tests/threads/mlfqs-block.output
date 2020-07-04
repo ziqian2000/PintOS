@@ -1,0 +1,26 @@
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/5UpbEk3nFF.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading...........
+Kernel command line: -q -mlfqs run mlfqs-block
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  419,020,800 loops/s.
+Boot complete.
+Executing 'mlfqs-block':
+(mlfqs-block) begin
+(mlfqs-block) Main thread acquiring lock.
+(mlfqs-block) Main thread creating block thread, sleeping 25 seconds...
+(mlfqs-block) Block thread spinning for 20 seconds...
+(mlfqs-block) Block thread acquiring lock...
+(mlfqs-block) Main thread spinning for 5 seconds...
+(mlfqs-block) Main thread releasing lock.
+(mlfqs-block) ...got it.
+(mlfqs-block) Block thread should have already acquired lock.
+(mlfqs-block) end
+Execution of 'mlfqs-block' complete.
+Timer: 3042 ticks
+Thread: 500 idle ticks, 2542 kernel ticks, 0 user ticks
+Console: 779 characters output
+Keyboard: 0 keys pressed
+Powering off...

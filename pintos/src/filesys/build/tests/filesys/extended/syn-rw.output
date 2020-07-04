@@ -1,0 +1,55 @@
+Copying tests/filesys/extended/syn-rw to scratch partition...
+Copying tests/filesys/extended/tar to scratch partition...
+Copying tests/filesys/extended/child-syn-rw to scratch partition...
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/iVem_9HpN8.dsk -drive format=raw,media=disk,index=1,file=tmp.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading............
+Kernel command line: -q -f extract run syn-rw
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  419,020,800 loops/s.
+hda: 9,072 sectors (4 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 203 sectors (101 kB), Pintos OS kernel (20)
+hda2: 354 sectors (177 kB), Pintos scratch (22)
+hda3: 8,192 sectors (4 MB), Pintos swap (23)
+hdb: 5,040 sectors (2 MB), model "QM00002", serial "QEMU HARDDISK"
+hdb1: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hdb1
+scratch: using hda2
+swap: using hda3
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'syn-rw' into the file system...
+Putting 'tar' into the file system...
+Putting 'child-syn-rw' into the file system...
+Erasing ustar archive...
+Executing 'syn-rw':
+(syn-rw) begin
+(syn-rw) create "logfile"
+(syn-rw) open "logfile"
+(syn-rw) exec child 1 of 4: "child-syn-rw 0"
+(syn-rw) exec child 2 of 4: "child-syn-rw 1"
+(syn-rw) exec child 3 of 4: "child-syn-rw 2"
+(syn-rw) exec child 4 of 4: "child-syn-rw 3"
+child-syn-rw: exit(3)
+child-syn-rw: exit(0)
+child-syn-rw: exit(1)
+child-syn-rw: exit(2)
+(syn-rw) wait for child 1 of 4 returned 0 (expected 0)
+(syn-rw) wait for child 2 of 4 returned 1 (expected 1)
+(syn-rw) wait for child 3 of 4 returned 2 (expected 2)
+(syn-rw) wait for child 4 of 4 returned 3 (expected 3)
+(syn-rw) end
+syn-rw: exit(0)
+Execution of 'syn-rw' complete.
+Timer: 282 ticks
+Thread: 82 idle ticks, 100 kernel ticks, 100 user ticks
+hdb1 (filesys): 69 reads, 364 writes
+hda2 (scratch): 353 reads, 2 writes
+hda3 (swap): 0 reads, 0 writes
+Console: 1654 characters output
+Keyboard: 0 keys pressed
+Exception: 26 page faults
+Powering off...

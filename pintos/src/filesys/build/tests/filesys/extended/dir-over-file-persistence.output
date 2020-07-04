@@ -1,0 +1,38 @@
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/Pio0689Phz.dsk -drive format=raw,media=disk,index=1,file=tmp.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading............
+Kernel command line: -q run 'tar fs.tar /' append fs.tar
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  419,430,400 loops/s.
+hda: 11,088 sectors (5 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 203 sectors (101 kB), Pintos OS kernel (20)
+hda2: 2,048 sectors (1 MB), Pintos scratch (22)
+hda3: 8,192 sectors (4 MB), Pintos swap (23)
+hdb: 5,040 sectors (2 MB), model "QM00002", serial "QEMU HARDDISK"
+hdb1: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hdb1
+scratch: using hda2
+swap: using hda3
+Boot complete.
+Executing 'tar fs.tar /':
+/: open failed
+tar: exit(1)
+Execution of 'tar fs.tar /' complete.
+Appending 'fs.tar' to ustar archive on scratch device...
+Kernel PANIC at ../../filesys/fsutil.c:187 in fsutil_append(): fs.tar: open failed
+Call stack: 0xc002950f 0xc010940c.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 93 ticks
+Thread: 33 idle ticks, 56 kernel ticks, 4 user ticks
+hdb1 (filesys): 37 reads, 0 writes
+hda2 (scratch): 0 reads, 0 writes
+hda3 (swap): 0 reads, 0 writes
+Console: 1198 characters output
+Keyboard: 0 keys pressed
+Exception: 5 page faults
+Powering off...
+Copying tests/filesys/extended/dir-over-file.tar out of /tmp/Pio0689Phz.dsk...

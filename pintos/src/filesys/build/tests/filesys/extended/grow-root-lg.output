@@ -1,0 +1,89 @@
+Copying tests/filesys/extended/grow-root-lg to scratch partition...
+Copying tests/filesys/extended/tar to scratch partition...
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/huLvfvtLbv.dsk -drive format=raw,media=disk,index=1,file=tmp.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading............
+Kernel command line: -q -f extract run grow-root-lg
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  419,020,800 loops/s.
+hda: 9,072 sectors (4 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 203 sectors (101 kB), Pintos OS kernel (20)
+hda2: 235 sectors (117 kB), Pintos scratch (22)
+hda3: 8,192 sectors (4 MB), Pintos swap (23)
+hdb: 5,040 sectors (2 MB), model "QM00002", serial "QEMU HARDDISK"
+hdb1: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hdb1
+scratch: using hda2
+swap: using hda3
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'grow-root-lg' into the file system...
+Putting 'tar' into the file system...
+Erasing ustar archive...
+Executing 'grow-root-lg':
+(grow-root-lg) begin
+(grow-root-lg) creating and checking "file0"
+(grow-root-lg) creating and checking "file1"
+(grow-root-lg) creating and checking "file2"
+(grow-root-lg) creating and checking "file3"
+(grow-root-lg) creating and checking "file4"
+(grow-root-lg) creating and checking "file5"
+(grow-root-lg) creating and checking "file6"
+(grow-root-lg) creating and checking "file7"
+(grow-root-lg) creating and checking "file8"
+(grow-root-lg) creating and checking "file9"
+(grow-root-lg) creating and checking "file10"
+(grow-root-lg) creating and checking "file11"
+(grow-root-lg) creating and checking "file12"
+(grow-root-lg) creating and checking "file13"
+(grow-root-lg) creating and checking "file14"
+(grow-root-lg) creating and checking "file15"
+(grow-root-lg) creating and checking "file16"
+(grow-root-lg) creating and checking "file17"
+(grow-root-lg) creating and checking "file18"
+(grow-root-lg) creating and checking "file19"
+(grow-root-lg) creating and checking "file20"
+(grow-root-lg) creating and checking "file21"
+(grow-root-lg) creating and checking "file22"
+(grow-root-lg) creating and checking "file23"
+(grow-root-lg) creating and checking "file24"
+(grow-root-lg) creating and checking "file25"
+(grow-root-lg) creating and checking "file26"
+(grow-root-lg) creating and checking "file27"
+(grow-root-lg) creating and checking "file28"
+(grow-root-lg) creating and checking "file29"
+(grow-root-lg) creating and checking "file30"
+(grow-root-lg) creating and checking "file31"
+(grow-root-lg) creating and checking "file32"
+(grow-root-lg) creating and checking "file33"
+(grow-root-lg) creating and checking "file34"
+(grow-root-lg) creating and checking "file35"
+(grow-root-lg) creating and checking "file36"
+(grow-root-lg) creating and checking "file37"
+(grow-root-lg) creating and checking "file38"
+(grow-root-lg) creating and checking "file39"
+(grow-root-lg) creating and checking "file40"
+(grow-root-lg) creating and checking "file41"
+(grow-root-lg) creating and checking "file42"
+(grow-root-lg) creating and checking "file43"
+(grow-root-lg) creating and checking "file44"
+(grow-root-lg) creating and checking "file45"
+(grow-root-lg) creating and checking "file46"
+(grow-root-lg) creating and checking "file47"
+(grow-root-lg) creating and checking "file48"
+(grow-root-lg) creating and checking "file49"
+(grow-root-lg) end
+grow-root-lg: exit(0)
+Execution of 'grow-root-lg' complete.
+Timer: 738 ticks
+Thread: 55 idle ticks, 77 kernel ticks, 606 user ticks
+hdb1 (filesys): 39 reads, 287 writes
+hda2 (scratch): 234 reads, 2 writes
+hda3 (swap): 0 reads, 0 writes
+Console: 3400 characters output
+Keyboard: 0 keys pressed
+Exception: 5 page faults
+Powering off...

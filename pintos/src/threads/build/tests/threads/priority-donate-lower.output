@@ -1,0 +1,25 @@
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/VgkWkvZEpd.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading...........
+Kernel command line: -q run priority-donate-lower
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  523,468,800 loops/s.
+Boot complete.
+Executing 'priority-donate-lower':
+(priority-donate-lower) begin
+(priority-donate-lower) Main thread should have priority 41.  Actual priority: 41.
+(priority-donate-lower) Lowering base priority...
+(priority-donate-lower) Main thread should have priority 41.  Actual priority: 41.
+(priority-donate-lower) acquire: got the lock
+(priority-donate-lower) acquire: done
+(priority-donate-lower) acquire must already have finished.
+(priority-donate-lower) Main thread should have priority 21.  Actual priority: 21.
+(priority-donate-lower) end
+Execution of 'priority-donate-lower' complete.
+Timer: 47 ticks
+Thread: 0 idle ticks, 47 kernel ticks, 0 user ticks
+Console: 865 characters output
+Keyboard: 0 keys pressed
+Powering off...

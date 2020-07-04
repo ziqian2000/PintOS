@@ -1,0 +1,52 @@
+Copying tests/filesys/extended/grow-two-files to scratch partition...
+Copying tests/filesys/extended/tar to scratch partition...
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/Fv1sZgEdzE.dsk -drive format=raw,media=disk,index=1,file=tmp.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading............
+Kernel command line: -q -f extract run grow-two-files
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  421,888,000 loops/s.
+hda: 9,072 sectors (4 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 203 sectors (101 kB), Pintos OS kernel (20)
+hda2: 239 sectors (119 kB), Pintos scratch (22)
+hda3: 8,192 sectors (4 MB), Pintos swap (23)
+hdb: 5,040 sectors (2 MB), model "QM00002", serial "QEMU HARDDISK"
+hdb1: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hdb1
+scratch: using hda2
+swap: using hda3
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'grow-two-files' into the file system...
+Putting 'tar' into the file system...
+Erasing ustar archive...
+Executing 'grow-two-files':
+(grow-two-files) begin
+(grow-two-files) create "a"
+(grow-two-files) create "b"
+(grow-two-files) open "a"
+(grow-two-files) open "b"
+(grow-two-files) write "a" and "b" alternately
+(grow-two-files) close "a"
+(grow-two-files) close "b"
+(grow-two-files) open "a" for verification
+(grow-two-files) verified contents of "a"
+(grow-two-files) close "a"
+(grow-two-files) open "b" for verification
+(grow-two-files) verified contents of "b"
+(grow-two-files) close "b"
+(grow-two-files) end
+grow-two-files: exit(0)
+Execution of 'grow-two-files' complete.
+Timer: 169 ticks
+Thread: 47 idle ticks, 95 kernel ticks, 27 user ticks
+hdb1 (filesys): 38 reads, 247 writes
+hda2 (scratch): 238 reads, 2 writes
+hda3 (swap): 0 reads, 0 writes
+Console: 1556 characters output
+Keyboard: 0 keys pressed
+Exception: 9 page faults
+Powering off...

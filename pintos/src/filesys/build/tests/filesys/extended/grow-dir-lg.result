@@ -1,0 +1,11 @@
+FAIL
+Kernel panic in run: PANIC at ../../userprog/syscall.c:306 in syscall_handler(): executed an unreachable statement
+Call stack: 0xc002950f 0x804a639
+Translation of call stack:
+In kernel.o:
+0xc002950f: debug_panic (.../../lib/kernel/debug.c:38)
+In tests/filesys/extended/grow-dir-lg:
+0x0804a639: mkdir (...../lib/user/syscall.c:165)
+Translations of user virtual addresses above are based on a guess at
+the binary to use.  If this guess is incorrect, then those
+translations will be misleading.

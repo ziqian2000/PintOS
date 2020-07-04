@@ -1,0 +1,5 @@
+FAIL
+Kernel panic in run: PANIC at ../../userprog/syscall.c:306 in syscall_handler(): executed an unreachable statement
+Call stack: 0xc002950f
+Translation of call stack:
+0xc002950f: debug_panic (.../../lib/kernel/debug.c:38)

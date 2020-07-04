@@ -1,0 +1,41 @@
+Copying tests/userprog/create-exists to scratch partition...
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/W6RScSBBkR.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading............
+Kernel command line: -q -f extract run create-exists
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  471,040,000 loops/s.
+hda: 13,104 sectors (6 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 203 sectors (101 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+hda3: 103 sectors (51 kB), Pintos scratch (22)
+hda4: 8,192 sectors (4 MB), Pintos swap (23)
+filesys: using hda2
+scratch: using hda3
+swap: using hda4
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'create-exists' into the file system...
+Erasing ustar archive...
+Executing 'create-exists':
+(create-exists) begin
+(create-exists) create quux.dat
+(create-exists) create warble.dat
+(create-exists) try to re-create quux.dat
+(create-exists) create baffle.dat
+(create-exists) try to re-create quux.dat
+(create-exists) end
+create-exists: exit(0)
+Execution of 'create-exists' complete.
+Timer: 100 ticks
+Thread: 37 idle ticks, 57 kernel ticks, 6 user ticks
+hda2 (filesys): 31 reads, 76 writes
+hda3 (scratch): 102 reads, 2 writes
+hda4 (swap): 0 reads, 0 writes
+Console: 1193 characters output
+Keyboard: 0 keys pressed
+Exception: 4 page faults
+Powering off...

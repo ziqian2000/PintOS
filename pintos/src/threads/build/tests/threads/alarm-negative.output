@@ -1,0 +1,19 @@
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/uFapFjrYlL.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading...........
+Kernel command line: -q run alarm-negative
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  523,468,800 loops/s.
+Boot complete.
+Executing 'alarm-negative':
+(alarm-negative) begin
+(alarm-negative) PASS
+(alarm-negative) end
+Execution of 'alarm-negative' complete.
+Timer: 47 ticks
+Thread: 0 idle ticks, 47 kernel ticks, 0 user ticks
+Console: 409 characters output
+Keyboard: 0 keys pressed
+Powering off...

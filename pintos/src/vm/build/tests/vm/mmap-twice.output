@@ -1,0 +1,44 @@
+Copying tests/vm/mmap-twice to scratch partition...
+Copying ../../tests/vm/sample.txt to scratch partition...
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/C0hDaoDWlE.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading............
+Kernel command line: -q -f extract run mmap-twice
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  419,020,800 loops/s.
+hda: 13,104 sectors (6 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 202 sectors (101 kB), Pintos OS kernel (20)
+hda2: 4,096 sectors (2 MB), Pintos file system (21)
+hda3: 109 sectors (54 kB), Pintos scratch (22)
+hda4: 8,192 sectors (4 MB), Pintos swap (23)
+filesys: using hda2
+scratch: using hda3
+swap: using hda4
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'mmap-twice' into the file system...
+Putting 'sample.txt' into the file system...
+Erasing ustar archive...
+Executing 'mmap-twice':
+(mmap-twice) begin
+(mmap-twice) open "sample.txt" #0
+(mmap-twice) mmap "sample.txt" #0 at 0x10000000
+(mmap-twice) open "sample.txt" #1
+(mmap-twice) mmap "sample.txt" #1 at 0x20000000
+(mmap-twice) compare mmap'd file 0 against data
+(mmap-twice) compare mmap'd file 1 against data
+(mmap-twice) end
+mmap-twice: exit(0)
+Execution of 'mmap-twice' complete.
+Timer: 82 ticks
+Thread: 39 idle ticks, 43 kernel ticks, 0 user ticks
+hda2 (filesys): 101 reads, 224 writes
+hda3 (scratch): 108 reads, 2 writes
+hda4 (swap): 0 reads, 0 writes
+Console: 1294 characters output
+Keyboard: 0 keys pressed
+Exception: 7 page faults
+Powering off...

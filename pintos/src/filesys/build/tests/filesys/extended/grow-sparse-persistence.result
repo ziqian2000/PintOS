@@ -1,0 +1,6 @@
+FAIL
+Kernel panic in file system extraction run: PANIC at ../../filesys/fsutil.c:187 in fsutil_append(): fs.tar: open failed
+Call stack: 0xc002950f 0xc010940c
+Translation of call stack:
+0xc002950f: debug_panic (.../../lib/kernel/debug.c:38)
+0xc010940c: (unknown)

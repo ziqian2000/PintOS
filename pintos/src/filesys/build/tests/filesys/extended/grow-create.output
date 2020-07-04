@@ -1,0 +1,43 @@
+Copying tests/filesys/extended/grow-create to scratch partition...
+Copying tests/filesys/extended/tar to scratch partition...
+qemu-system-i386 -device isa-debug-exit -drive format=raw,media=disk,index=0,file=/tmp/EZJT4UK5k1.dsk -drive format=raw,media=disk,index=1,file=tmp.dsk -m 4 -net none -nographic -monitor null
+Pintos hda1
+Loading............
+Kernel command line: -q -f extract run grow-create
+Pintos booting with 3,968 kB RAM...
+367 pages available in kernel pool.
+367 pages available in user pool.
+Calibrating timer...  419,020,800 loops/s.
+hda: 9,072 sectors (4 MB), model "QM00001", serial "QEMU HARDDISK"
+hda1: 203 sectors (101 kB), Pintos OS kernel (20)
+hda2: 234 sectors (117 kB), Pintos scratch (22)
+hda3: 8,192 sectors (4 MB), Pintos swap (23)
+hdb: 5,040 sectors (2 MB), model "QM00002", serial "QEMU HARDDISK"
+hdb1: 4,096 sectors (2 MB), Pintos file system (21)
+filesys: using hdb1
+scratch: using hda2
+swap: using hda3
+Formatting file system...done.
+Boot complete.
+Extracting ustar archive from scratch device into file system...
+Putting 'grow-create' into the file system...
+Putting 'tar' into the file system...
+Erasing ustar archive...
+Executing 'grow-create':
+(grow-create) begin
+(grow-create) create "blargle"
+(grow-create) open "blargle" for verification
+(grow-create) verified contents of "blargle"
+(grow-create) close "blargle"
+(grow-create) end
+grow-create: exit(0)
+Execution of 'grow-create' complete.
+Timer: 138 ticks
+Thread: 53 idle ticks, 77 kernel ticks, 8 user ticks
+hdb1 (filesys): 35 reads, 209 writes
+hda2 (scratch): 233 reads, 2 writes
+hda3 (swap): 0 reads, 0 writes
+Console: 1253 characters output
+Keyboard: 0 keys pressed
+Exception: 5 page faults
+Powering off...
